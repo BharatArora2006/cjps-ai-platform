@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Admin Dashboard
+    </title>
+
+    <style>
+
+        *{
+            margin:0;
+            padding:0;
+            box-sizing:border-box;
+        }
+
+        body{
+            font-family:Arial,sans-serif;
+            background:#f3f6fb;
+            padding:24px;
+            color:#111827;
+        }
+
+        .header{
+            background:linear-gradient(135deg,#1e3a8a,#2563eb);
+            color:white;
+            padding:28px;
+            border-radius:18px;
+            margin-bottom:24px;
+            box-shadow:0 8px 24px rgba(0,0,0,0.15);
+        }
+
+        .header h1{
+            font-size:34px;
+            margin-bottom:8px;
+        }
+
+        .header p{
+            opacity:.92;
+        }
+
+        .stats-container{
+            display:grid;
+            grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+            gap:18px;
+            margin-bottom:24px;
+        }
+
+        .stat-card{
+            background:white;
+            border-radius:16px;
+            padding:24px;
+            box-shadow:0 2px 12px rgba(0,0,0,0.06);
+        }
+
+        .stat-card h2{
+            color:#2563eb;
+            font-size:32px;
+            margin-bottom:6px;
+        }
+
+        .stat-card p{
+            color:#6b7280;
+        }
+
+        .section{
+            background:white;
+            border-radius:18px;
+            padding:24px;
+            box-shadow:0 2px 12px rgba(0,0,0,0.06);
+            overflow-x:auto;
+            margin-bottom:24px;
+        }
+
+        .section-title{
+            font-size:28px;
+            font-weight:bold;
+            margin-bottom:20px;
+        }
+
+        .upload-form textarea{
+            width:100%;
+            height:140px;
+            padding:14px;
+            border-radius:12px;
+            border:1px solid #d1d5db;
+            margin-bottom:18px;
+            resize:vertical;
+            font-size:15px;
+        }
+
+        .upload-form input[type=file]{
+            margin-bottom:18px;
+        }
+
+        .btn{
+            border:none;
+            border-radius:10px;
+            padding:10px 16px;
+            cursor:pointer;
+            font-weight:600;
+            transition:.2s;
+        }
+
+        .btn:hover{
+            opacity:.92;
+        }
+
+        .btn-primary{
+            background:#2563eb;
+            color:white;
+        }
+
+        .btn-success{
+            background:#16a34a;
+            color:white;
+        }
+
+        .btn-danger{
+            background:#dc2626;
+            color:white;
+        }
+
+        .btn-dark{
+            background:#111827;
+            color:white;
+        }
+
+        .filters{
+            display:flex;
+            gap:12px;
+            flex-wrap:wrap;
+            margin-bottom:22px;
+        }
+
+        .filters input,
+        .filters select{
+            padding:12px;
+            border-radius:10px;
+            border:1px solid #d1d5db;
+            min-width:180px;
+            background:white;
+            font-size:14px;
+        }
+
+        table{
+            width:100%;
+            border-collapse:collapse;
+            min-width:1400px;
+        }
+
+        th{
+            background:#1f2937;
+            color:white;
+            padding:16px 14px;
+            text-align:left;
+            font-size:15px;
+        }
+
+        td{
+            padding:18px 14px;
+            border-bottom:1px solid #eef2f7;
+            vertical-align:top;
+            font-size:15px;
+        }
+
+        tr:hover{
+            background:#f9fafb;
+        }
+
+        .status{
+            display:inline-block;
+            padding:7px 14px;
+            border-radius:999px;
+            font-size:12px;
+            font-weight:bold;
+        }
+
+        .assigned{
+            background:#fef3c7;
+            color:#92400e;
+        }
+
+        .progress{
+            background:#dbeafe;
+            color:#1d4ed8;
+        }
+
+        .completed{
+            background:#dcfce7;
+            color:#166534;
+        }
+
+        .pending{
+            background:#fee2e2;
+            color:#991b1b;
+        }
+
+        .approved{
+            background:#d1fae5;
+            color:#065f46;
+        }
+
+        .rejected{
+            background:#fee2e2;
+            color:#991b1b;
+        }
+
+        .summary-box{
+            background:#f8fafc;
+            border-left:4px solid #2563eb;
+            padding:14px;
+            border-radius:12px;
+            width:360px;
+            line-height:1.6;
+            font-size:14px;
+            color:#374151;
+        }
+
+        .action-buttons{
+            display:flex;
+            flex-direction:column;
+            gap:10px;
+            min-width:180px;
+        }
+
+        .action-buttons form{
+            margin:0;
+        }
+
+        .action-buttons .btn{
+            width:100%;
+        }
+
+        .action-buttons select{
+            width:100%;
+            padding:10px;
+            border-radius:8px;
+            border:1px solid #d1d5db;
+            background:white;
+            font-size:14px;
+        }
+
+        .pdf-btn{
+            padding:10px 16px;
+            font-size:14px;
+        }
+
+        .small-text{
+            color:#6b7280;
+            font-size:13px;
+        }
+
+        @media(max-width:1200px){
+
+            body{
+                padding:14px;
+            }
+
+            .section{
+                padding:16px;
+            }
+
+            table{
+                min-width:1200px;
+            }
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+    <!-- HEADER -->
+    <div class="header">
+
+        <h1>
+            🚀 AI Workflow Admin Dashboard
+        </h1>
+
+        <p>
+            Manage AI intake, contractor assignment, PDFs, and workflow tracking.
+        </p>
+
+        <br>
+
+        <a href="/analytics">
+
+            <button class="btn btn-dark">
+                📊 View Analytics
+            </button>
+
+        </a>
+
+    </div>
+
+
+    <!-- STATS -->
+    <div class="stats-container">
+
+        <div class="stat-card">
+
+            <h2>
+                {{ jobs|length }}
+            </h2>
+
+            <p>
+                Total Jobs
+            </p>
+
+        </div>
+
+        <div class="stat-card">
+
+            <h2>
+                {{ contractors|length }}
+            </h2>
+
+            <p>
+                Total Contractors
+            </p>
+
+        </div>
+
+        <div class="stat-card">
+
+            <h2>
+                AI
+            </h2>
+
+            <p>
+                Automation Enabled
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- UPLOAD -->
+    <div class="section">
+
+        <div class="section-title">
+            📥 Upload Email & PDFs
+        </div>
+
+        <form
+            class="upload-form"
+            action="/upload"
+            method="post"
+            enctype="multipart/form-data"
+        >
+
+            <textarea
+                name="email_text"
+                placeholder="Paste client email here..."
+                required
+            ></textarea>
+
+            <input
+                type="file"
+                name="files"
+                multiple
+                required
+            >
+
+            <br>
+
+            <button
+                class="btn btn-primary"
+                type="submit"
+            >
+                Upload & Process
+            </button>
+
+        </form>
+
+    </div>
+
+
+    <!-- JOBS -->
+    <div class="section">
+
+        <div class="section-title">
+            📋 Active Jobs
+        </div>
+
+
+        <!-- FILTERS -->
+        <form
+            method="get"
+            action="/dashboard"
+            class="filters"
+        >
+
+            <input
+                type="text"
+                name="search"
+                placeholder="Search client, defendant, county..."
+                value="{{ search }}"
+            >
+
+            <select name="status">
+
+                <option value="">
+                    All Status
+                </option>
+
+                <option
+                    value="Assigned"
+                    {% if selected_status == 'Assigned' %}
+                    selected
+                    {% endif %}
+                >
+                    Assigned
+                </option>
+
+                <option
+                    value="Approved"
+                    {% if selected_status == 'Approved' %}
+                    selected
+                    {% endif %}
+                >
+                    Approved
+                </option>
+
+                <option
+                    value="Rejected"
+                    {% if selected_status == 'Rejected' %}
+                    selected
+                    {% endif %}
+                >
+                    Rejected
+                </option>
+
+                <option
+                    value="Completed"
+                    {% if selected_status == 'Completed' %}
+                    selected
+                    {% endif %}
+                >
+                    Completed
+                </option>
+
+            </select>
+
+
+            <input
+                type="text"
+                name="county"
+                placeholder="County"
+                value="{{ selected_county }}"
+            >
+
+
+            <select name="contractor_id">
+
+                <option value="">
+                    All Contractors
+                </option>
+
+                {% for contractor in contractors %}
+
+                <option
+                    value="{{ contractor.id }}"
+                    {% if selected_contractor == contractor.id|string %}
+                    selected
+                    {% endif %}
+                >
+                    {{ contractor.name }}
+                </option>
+
+                {% endfor %}
+
+            </select>
+
+            <button
+                class="btn btn-primary"
+                type="submit"
+            >
+                Search
+            </button>
+
+        </form>
+
+
+        <!-- TABLE -->
+        <table>
+
+            <tr>
+
+                <th>ID</th>
+
+                <th>Client</th>
+
+                <th>Defendant</th>
+
+                <th>County</th>
+
+                <th>AI Summary</th>
+
+                <th>Contractor</th>
+
+                <th>Status</th>
+
+                <th>Created</th>
+
+                <th>SLA</th>
+
+                <th>Document</th>
+
+                <th>Actions</th>
+
+            </tr>
+
+
+            {% for job in jobs %}
+
+            <tr>
+
+                <td>
+                    {{ job.id }}
+                </td>
+
+                <td>
+                    {{ job.client_name }}
+                </td>
+
+                <td>
+                    {{ job.defendant_name }}
+                </td>
+
+                <td>
+                    {{ job.county }}
+                </td>
+
+
+                <!-- SUMMARY -->
+                <td>
+
+                    <div class="summary-box">
+                        {{ job.summary }}
+                    </div>
+
+                </td>
+
+
+                <!-- CONTRACTOR -->
+                <td>
+                    {{ job.contractor_name }}
+                </td>
+
+
+                <!-- STATUS -->
+                <td>
+
+                    {% if job.status == 'Assigned' %}
+
+                        <span class="status assigned">
+                            {{ job.status }}
+                        </span>
+
+                    {% elif job.status == 'In Progress' %}
+
+                        <span class="status progress">
+                            {{ job.status }}
+                        </span>
+
+                    {% elif job.status == 'Completed' %}
+
+                        <span class="status completed">
+                            {{ job.status }}
+                        </span>
+
+                    {% elif job.status == 'Approved' %}
+
+                        <span class="status approved">
+                            {{ job.status }}
+                        </span>
+
+                    {% elif job.status == 'Rejected' %}
+
+                        <span class="status rejected">
+                            {{ job.status }}
+                        </span>
+
+                    {% else %}
+
+                        <span class="status pending">
+                            {{ job.status }}
+                        </span>
+
+                    {% endif %}
+
+                </td>
+
+
+                <!-- CREATED -->
+                <td>
+                    {{ job.created_at }}
+                </td>
+
+
+                <!-- SLA -->
+                <td>
+
+                    {% if job.is_overdue %}
+
+                        <span class="status pending">
+                            ⚠ OVERDUE
+                        </span>
+
+                    {% else %}
+
+                        <span class="status completed">
+                            ON TIME
+                        </span>
+
+                    {% endif %}
+
+                </td>
+
+
+                <!-- PDF -->
+                <td>
+
+                    {% if job.document_path %}
+
+                    <a
+                        class="pdf-link"
+                        href="/{{ job.document_path }}"
+                        target="_blank"
+                    >
+
+                        <button class="btn btn-dark pdf-btn">
+                            📄 PDF
+                        </button>
+
+                    </a>
+
+                    {% else %}
+
+                        <span class="small-text">
+                            No PDF
+                        </span>
+
+                    {% endif %}
+
+                </td>
+
+
+                <!-- ACTIONS -->
+                <td>
+
+                    <div class="action-buttons">
+
+                        <!-- APPROVE -->
+                        <form
+                            action="/jobs/{{ job.id }}/approve"
+                            method="post"
+                        >
+
+                            <button class="btn btn-success">
+                                Approve
+                            </button>
+
+                        </form>
+
+
+                        <!-- REJECT -->
+                        <form
+                            action="/jobs/{{ job.id }}/reject"
+                            method="post"
+                        >
+
+                            <button class="btn btn-danger">
+                                Reject
+                            </button>
+
+                        </form>
+
+
+                        <!-- REASSIGN -->
+                        <form
+                            action="/jobs/{{ job.id }}/reassign"
+                            method="post"
+                        >
+
+                            <select name="contractor_id">
+
+                                {% for contractor in contractors %}
+
+                                <option value="{{ contractor.id }}">
+                                    {{ contractor.name }}
+                                </option>
+
+                                {% endfor %}
+
+                            </select>
+
+                            <button class="btn btn-primary">
+                                Reassign
+                            </button>
+
+                        </form>
+
+                    </div>
+
+                </td>
+
+            </tr>
+
+            {% endfor %}
+
+        </table>
+
+    </div>
+
+</body>
+
+</html>

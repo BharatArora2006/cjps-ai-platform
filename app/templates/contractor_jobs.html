@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Contractor Portal</title>
+
+    <style>
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f7fb;
+            margin: 0;
+            padding: 30px;
+        }
+
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+
+        .header h1 {
+            margin: 0;
+            color: #222;
+        }
+
+        .subtext {
+            color: gray;
+            margin-top: 8px;
+        }
+
+        .table-container {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #1f2937;
+            color: white;
+            padding: 14px;
+            text-align: left;
+        }
+
+        td {
+            padding: 14px;
+            border-bottom: 1px solid #eee;
+        }
+
+        tr:hover {
+            background: #f9fafb;
+        }
+
+        .status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            display: inline-block;
+        }
+
+        .assigned {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .progress {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .completed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .btn {
+            border: none;
+            padding: 10px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-bottom: 8px;
+            width: 130px;
+        }
+
+        .btn-start {
+            background: #2563eb;
+            color: white;
+        }
+
+        .btn-complete {
+            background: #16a34a;
+            color: white;
+        }
+
+        .btn-pdf {
+            background: #111827;
+            color: white;
+            text-decoration: none;
+            padding: 10px 14px;
+            border-radius: 8px;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+    </style>
+</head>
+
+<body>
+
+    <div class="header">
+        <h1>
+            🚀 {{ contractor.contractor_name }} Contractor Portal
+        </h1>
+
+        <div class="subtext">
+            View assigned jobs, access PDFs, and update progress.
+        </div>
+    </div>
+
+
+    <div class="table-container">
+
+        <table>
+
+            <tr>
+                <th>ID</th>
+                <th>Client</th>
+                <th>Defendant</th>
+                <th>Address</th>
+                <th>Status</th>
+                <th>Document</th>
+                <th>Actions</th>
+            </tr>
+
+            {% for job in jobs %}
+
+            <tr>
+
+                <td>{{ job.id }}</td>
+                <td>{{ job.client_name }}</td>
+                <td>{{ job.defendant_name }}</td>
+                <td>{{ job.address }}</td>
+
+                <td>
+
+                    {% if job.status == 'Assigned' %}
+
+                        <span class="status assigned">
+                            {{ job.status }}
+                        </span>
+
+                    {% elif job.status == 'In Progress' %}
+
+                        <span class="status progress">
+                            {{ job.status }}
+                        </span>
+
+                    {% elif job.status == 'Completed' %}
+
+                        <span class="status completed">
+                            {{ job.status }}
+                        </span>
+
+                    {% else %}
+
+                        <span class="status">
+                            {{ job.status }}
+                        </span>
+
+                    {% endif %}
+
+                </td>
+
+                <td>
+                    {% if job.document_path %}
+
+                    <a
+                        class="btn-pdf"
+                        href="/{{ job.document_path }}"
+                        target="_blank"
+                    >
+                        📄 View PDF
+                    </a>
+
+                    {% endif %}
+                </td>
+
+                <td>
+
+                    <!-- START JOB -->
+                    <form
+                        action="/jobs/{{ job.id }}/update-status"
+                        method="post"
+                    >
+
+                        <input
+                            type="hidden"
+                            name="status"
+                            value="In Progress"
+                        >
+
+                        <button
+                            class="btn btn-start"
+                            type="submit"
+                        >
+                            ▶ Start Job
+                        </button>
+
+                    </form>
+
+
+                    <!-- COMPLETE JOB -->
+                    <form
+                        action="/jobs/{{ job.id }}/update-status"
+                        method="post"
+                    >
+
+                        <input
+                            type="hidden"
+                            name="status"
+                            value="Completed"
+                        >
+
+                        <button
+                            class="btn btn-complete"
+                            type="submit"
+                        >
+                            ✔ Complete
+                        </button>
+
+                    </form>
+
+                </td>
+
+            </tr>
+
+            {% endfor %}
+
+        </table>
+
+    </div>

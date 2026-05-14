@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Audit Logs</title>
+</head>
+
+<body>
+
+    <h1>Audit Logs</h1>
+
+    <table border="1" cellpadding="10">
+
+        <tr>
+            <th>Time</th>
+            <th>Action</th>
+            <th>User</th>
+            <th>Job ID</th>
+        </tr>
+
+        {% for log in logs %}
+
+        <tr>
+
+            <td>{{ log.timestamp }}</td>
+
+            <td>{{ log.action }}</td>
+
+            <td>{{ log.performed_by }}</td>
+
+            <td>{{ log.job_id }}</td>
+
+        </tr>
+
+        {% endfor %}
+
+    </table>
+
+</body>
+
+</html>

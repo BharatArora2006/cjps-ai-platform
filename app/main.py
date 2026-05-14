@@ -1,0 +1,861 @@
+print("✅ RUNNING MAIN.PY ✅")
+
+from fastapi import FastAPI, Request, Depends
+from fastapi.templating import Jinja2Templates
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse, HTMLResponse
+from fastapi import UploadFile, File, Form
+from fastapi.staticfiles import StaticFiles
+
+from sqlalchemy.orm import Session
+
+from app.db.database import SessionLocal, engine
+from app.db.models import Job, Contractor, Admin, Base, AuditLog
+
+from app.modules.email_reader import read_email
+from app.modules.pdf_parser import extract_text_from_pdf
+from app.modules.ai_parser import extract_job_data
+from app.modules.job_service import create_job
+from app.modules.summary_service import generate_case_summary
+
+from starlette.middleware.sessions import SessionMiddleware
+import os
+from datetime import datetime, timedelta
+
+# ✅ Create uploads folder if missing
+os.makedirs("uploads", exist_ok=True)
+
+# ✅ Create DB tables
+Base.metadata.create_all(bind=engine)
+
+app = FastAPI()
+app.mount(
+    "/uploads",
+    StaticFiles(directory="uploads"),
+    name="uploads"
+    )
+
+# ✅ CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# ✅ SESSION MIDDLEWARE
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=os.getenv("SECRET_KEY")
+)
+
+# ✅ Templates
+templates = Jinja2Templates(directory="app/templates")
+
+
+# ✅ DB Dependency
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+def require_admin(request: Request):
+
+    admin_id = request.session.get("admin_id")
+
+    if not admin_id:
+
+        return False
+
+    return True
+
+def require_contractor(request: Request):
+
+    contractor_id = request.session.get("contractor_id")
+
+    if not contractor_id:
+
+        return False
+
+    return contractor_id
+
+# ✅ HEALTH
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
+# ✅ PROCESS EMAIL
+@app.post("/process-email/")
+def process_email(db: Session = Depends(get_db)):
+
+    email_text, attachments = read_email("sample.eml")
+
+    full_pdf_text = ""
+
+    for file in attachments:
+        full_pdf_text += extract_text_from_pdf(file)
+
+    data = extract_job_data(email_text, full_pdf_text)
+
+    job = create_job(data)
+
+    return {
+        "message": "Job created",
+        "job_id": job.id,
+        "data": data
+    }
+
+
+# ✅ DASHBOARD
+@app.get("/dashboard")
+def dashboard(
+    request: Request,
+    search: str = "",
+    status: str = "",
+    county: str = "",
+    contractor_id: str = ""
+    ):
+    
+    if not require_admin(request):
+
+        return RedirectResponse(
+            url="/admin-login",
+            status_code=303
+        )
+
+    # ✅ CHECK ADMIN LOGIN
+    admin_id = request.session.get("admin_id")
+
+    if not admin_id:
+
+        return RedirectResponse(
+            url="/admin-login",
+            status_code=303
+        )
+
+    print("🔥 DASHBOARD ROUTE HIT")
+
+    db = SessionLocal()
+
+    try:
+
+        # ✅ JOB QUERY
+        query = db.query(Job)
+
+        # ✅ SEARCH
+        if search:
+
+            query = query.filter(
+                Job.client_name.ilike(f"%{search}%")
+                |
+                Job.defendant_name.ilike(f"%{search}%")
+                |
+                Job.county.ilike(f"%{search}%")
+            )
+
+        # ✅ STATUS FILTER
+        if status:
+
+            query = query.filter(
+                Job.status == status
+            )
+
+        # ✅ COUNTY FILTER
+        if county:
+
+            query = query.filter(
+                Job.county.ilike(f"%{county}%")
+            )
+
+        # ✅ CONTRACTOR FILTER
+        if contractor_id:
+
+            query = query.filter(
+                Job.contractor_id == int(contractor_id)
+            )
+
+        # ✅ FETCH FILTERED JOBS
+        jobs_db = query.all()
+
+        # ✅ FETCH ALL CONTRACTORS
+        contractors_db = db.query(Contractor).all()
+
+        # ✅ CONTRACTOR DROPDOWN DATA
+        contractors = [
+            {
+                "id": c.id,
+                "name": c.contractor_name
+            }
+            for c in contractors_db
+        ]
+
+        jobs = []
+
+        for j in jobs_db:
+
+            contractor_name = "Not Assigned"
+
+            print("JOB CONTRACTOR ID:", j.contractor_id)
+
+            if j.contractor_id:
+
+                contractor = db.query(Contractor).filter(
+                    Contractor.id == j.contractor_id
+                ).first()
+
+                print("FOUND CONTRACTOR:", contractor)
+
+                if contractor:
+
+                    contractor_name = contractor.contractor_name
+
+            # ✅ SLA OVERDUE CHECK
+            is_overdue = False
+
+            if j.created_at:
+
+                age = datetime.utcnow() - j.created_at
+
+                if (
+                    age > timedelta(days=3)
+                    and j.status not in [
+                        "Completed",
+                        "Approved"
+                    ]
+                ):
+
+                    is_overdue = True
+            
+            jobs.append({
+                "id": j.id,
+                "client_name": j.client_name,
+                "defendant_name": j.defendant_name,
+                "address": j.address,
+                "county": j.county,
+                "status": j.status,
+                "contractor_name": contractor_name,
+                "document_path": j.document_path,
+                "is_overdue": is_overdue,
+                "created_at": (
+                    j.created_at.strftime("%Y-%m-%d")
+                    if j.created_at
+                    else "N/A"
+                )
+                ,
+                "summary": j.summary
+            })
+
+    finally:
+
+        db.close()
+
+    return templates.TemplateResponse(
+        name="dashboard.html",
+        request=request,
+        context={
+            "jobs": jobs,
+            "contractors": contractors,
+            "search": search,
+            "selected_status": status,
+            "selected_county": county,
+            "selected_contractor": contractor_id
+        }
+    )
+
+# ✅ APPROVE JOB
+@app.post("/jobs/{job_id}/approve")
+def approve_job(
+    request: Request,
+    job_id: int
+):
+
+    if not require_admin(request):
+
+        return RedirectResponse(
+            url="/admin-login",
+            status_code=303
+        )
+
+    db = SessionLocal()
+
+    job = db.query(Job).filter(
+        Job.id == job_id
+    ).first()
+
+    if job:
+
+        job.status = "Approved"
+
+        db.commit()
+
+    db.close()
+
+    return RedirectResponse(
+        url="/dashboard",
+        status_code=303
+    )
+
+# ✅ REJECT JOB
+@app.post("/jobs/{job_id}/reject")
+def reject_job(request: Request, job_id: int):
+
+    db = SessionLocal()
+
+    job = db.query(Job).filter(Job.id == job_id).first()
+
+    if job:
+        job.status = "Rejected"
+        db.commit()
+
+    db.close()
+
+    return RedirectResponse(url="/dashboard", status_code=303)
+
+@app.post("/jobs/{job_id}/reassign")
+def reassign_job(
+    request: Request,
+    job_id: int,
+    contractor_id: int = Form(...)
+):
+
+    # ✅ ADMIN SECURITY CHECK
+    if not require_admin(request):
+
+        return RedirectResponse(
+            url="/admin-login",
+            status_code=303
+        )
+
+    print("🔥 REASSIGN HIT")
+    print("JOB ID:", job_id)
+    print("NEW CONTRACTOR ID:", contractor_id)
+
+    db = SessionLocal()
+
+    try:
+
+        # Find job
+        job = db.query(Job).filter(
+            Job.id == job_id
+        ).first()
+
+        if not job:
+
+            print("❌ JOB NOT FOUND")
+
+            return RedirectResponse(
+                url="/dashboard",
+                status_code=303
+            )
+
+        print("✅ JOB FOUND")
+
+        # OLD contractor
+        old_contractor = None
+
+        if job.contractor_id:
+
+            old_contractor = db.query(Contractor).filter(
+                Contractor.id == job.contractor_id
+            ).first()
+
+        # NEW contractor
+        new_contractor = db.query(Contractor).filter(
+            Contractor.id == contractor_id
+        ).first()
+
+        print("OLD CONTRACTOR:", old_contractor)
+        print("NEW CONTRACTOR:", new_contractor)
+
+        # Reduce old workload
+        if old_contractor and old_contractor.active_jobs > 0:
+
+            old_contractor.active_jobs -= 1
+
+        # Increase new workload
+        if new_contractor:
+
+            new_contractor.active_jobs += 1
+
+        # Update job
+        job.contractor_id = contractor_id
+
+        job.status = "Reassigned"
+
+        db.commit()
+
+        print("✅ REASSIGN SUCCESS")
+
+    finally:
+
+        db.close()
+
+    return RedirectResponse(
+        url="/dashboard",
+        status_code=303
+    )
+
+# ✅ SHOW UPLOAD PAGE
+@app.get("/upload")
+def upload_page(request: Request):
+
+    print("🔥 UPLOAD PAGE HIT")
+
+    return templates.TemplateResponse(
+        name="upload.html",
+        request=request,
+        context={
+            "request": request
+        }
+    )
+
+
+# ✅ HANDLE FILE UPLOAD
+@app.post("/upload")
+async def upload_files(
+    request: Request,
+    email_text: str = Form(...),
+    files: list[UploadFile] = File(...)
+):
+
+    import os
+
+    full_pdf_text = ""
+
+    saved_file_path = None
+
+    for file in files:
+
+        content = await file.read()
+
+        # os.makedirs("uploads", exist_ok=True)
+
+        safe_filename = file.filename.lower()
+
+        file_path = f"uploads/{safe_filename}"
+        print("======1FILE SAVED AT:", os.path.abspath(file_path))
+        with open(file_path, "wb") as f:
+            f.write(content)
+        print("========2FILE SAVED AT:", os.path.abspath(file_path))
+
+        # Save first uploaded file path
+        if not saved_file_path:
+            saved_file_path = file_path
+
+        # Extract text from PDF
+        full_pdf_text += extract_text_from_pdf(file_path)
+
+    # AI Extraction
+    data = extract_job_data(email_text, full_pdf_text)
+    # AI SUMMARY
+    summary = generate_case_summary(data)
+
+    # Save Job
+    create_job(
+        data,
+        document_path=saved_file_path,
+        summary=summary
+    )
+
+    return RedirectResponse(
+        url="/dashboard",
+        status_code=303
+    )
+
+@app.get("/contractor/{contractor_id}/jobs")
+def contractor_jobs(
+    contractor_id: int,
+    request: Request
+):
+    print("SESSION:", request.session)
+    # ✅ SESSION CHECK
+    logged_in_contractor = request.session.get("contractor_id")
+
+    admin_id = request.session.get("admin_id")
+
+    # ✅ ALLOW ADMIN ACCESS
+    if admin_id:
+
+        pass
+
+    # ✅ ALLOW ONLY OWN CONTRACTOR PAGE
+    elif logged_in_contractor != contractor_id:
+
+        return RedirectResponse(
+            url="/login",
+            status_code=303
+        )
+
+    db = SessionLocal()
+
+    jobs_db = db.query(Job).filter(
+        Job.contractor_id == contractor_id
+    ).all()
+
+    contractor = db.query(Contractor).filter(
+        Contractor.id == contractor_id
+    ).first()
+
+    jobs = []
+
+    
+
+    for j in jobs_db:
+
+        jobs.append({
+            "id": j.id,
+            "client_name": j.client_name,
+            "defendant_name": j.defendant_name,
+            "address": j.address,
+            "status": j.status,
+            "document_path": j.document_path
+        })
+
+    db.close()
+
+    return templates.TemplateResponse(
+        name="contractor_jobs.html",
+        request=request,
+        context={
+            "jobs": jobs,
+            "contractor": contractor
+        }
+    )
+
+@app.post("/jobs/{job_id}/update-status")
+def update_job_status(
+    job_id: int,
+    status: str = Form(...)
+    ):
+
+    db = SessionLocal()
+
+    job = db.query(Job).filter(
+        Job.id == job_id
+    ).first()
+
+    if job:
+        job.status = status
+        # ✅ CREATE AUDIT LOG
+        log = AuditLog(
+            action=f"Status changed to {status}",
+            performed_by="Contractor",
+            job_id=job.id
+        )
+
+        db.add(log)
+        
+        db.commit()
+
+        contractor_id = job.contractor_id
+
+    else:
+        contractor_id = 1
+
+    db.close()
+
+    return RedirectResponse(
+        url=f"/contractor/{contractor_id}/jobs",
+        status_code=303
+    )
+
+@app.get("/login")
+def login_page(request: Request):
+
+    return templates.TemplateResponse(
+        name="login.html",
+        request=request,
+        context={}
+    )
+
+@app.post("/login")
+def login(
+    request: Request,
+    email: str = Form(...),
+    password: str = Form(...)
+):
+
+    db = SessionLocal()
+
+    contractor = db.query(Contractor).filter(
+        Contractor.email == email,
+        Contractor.password == password
+    ).first()
+
+    db.close()
+
+    if contractor:
+        request.session.clear()
+        request.session["contractor_id"] = contractor.id
+
+        return RedirectResponse(
+            url="/my-jobs",
+            status_code=303
+        )
+
+    return HTMLResponse("Invalid credentials")
+
+@app.get("/my-jobs")
+def my_jobs(request: Request):
+
+    contractor_id = request.session.get("contractor_id")
+
+    if not contractor_id:
+        return RedirectResponse("/login")
+
+    return RedirectResponse(
+        url=f"/contractor/{contractor_id}/jobs",
+        status_code=303
+    )
+
+@app.get("/admin-login")
+def admin_login_page(request: Request):
+
+    return templates.TemplateResponse(
+        name="admin_login.html",
+        request=request,
+        context={}
+    )
+
+@app.post("/admin-login")
+def admin_login(
+    request: Request,
+    email: str = Form(...),
+    password: str = Form(...)
+):
+
+    db = SessionLocal()
+
+    admin = db.query(Admin).filter(
+        Admin.email == email,
+        Admin.password == password
+    ).first()
+
+    db.close()
+
+    if admin:
+        request.session.clear()
+        request.session["admin_id"] = admin.id
+
+        return RedirectResponse(
+            url="/dashboard",
+            status_code=303
+        )
+
+    return HTMLResponse("Invalid admin credentials")
+
+
+@app.get("/audit-logs")
+def audit_logs(request: Request):
+
+    db = SessionLocal()
+
+    logs = db.query(AuditLog).order_by(
+        AuditLog.timestamp.desc()
+    ).all()
+
+    db.close()
+
+    return templates.TemplateResponse(
+        name="audit_logs.html",
+        request=request,
+        context={
+            "logs": logs
+        }
+    )
+
+# ✅ LOGOUT
+@app.get("/logout")
+def logout(request: Request):
+
+    request.session.clear()
+
+    return RedirectResponse(
+        url="/login",
+        status_code=303
+    )
+
+
+@app.get("/analytics")
+def analytics_dashboard(
+    request: Request
+):
+
+    # ✅ ADMIN SECURITY
+    if not require_admin(request):
+
+        return RedirectResponse(
+            url="/admin-login",
+            status_code=303
+        )
+
+    db = SessionLocal()
+
+    # TOTALS
+    total_jobs = db.query(Job).count()
+
+    approved_jobs = db.query(Job).filter(
+        Job.status == "Approved"
+    ).count()
+
+    rejected_jobs = db.query(Job).filter(
+        Job.status == "Rejected"
+    ).count()
+
+    completed_jobs = db.query(Job).filter(
+        Job.status == "Completed"
+    ).count()
+
+    assigned_jobs = db.query(Job).filter(
+        Job.status == "Assigned"
+    ).count()
+
+    # COUNTY ANALYTICS
+    jobs_db = db.query(Job).all()
+
+    county_data = {}
+
+    for job in jobs_db:
+
+        county = job.county or "Unknown"
+
+        county_data[county] = county_data.get(
+            county,
+            0
+        ) + 1
+
+    # CONTRACTOR ANALYTICS
+    contractors_db = db.query(Contractor).all()
+
+    contractor_labels = []
+
+    contractor_jobs = []
+
+    for contractor in contractors_db:
+
+        contractor_labels.append(
+            contractor.contractor_name
+        )
+
+        contractor_jobs.append(
+            contractor.active_jobs or 0
+        )
+
+    db.close()
+
+    return templates.TemplateResponse(
+        name="analytics.html",
+        request=request,
+        context={
+
+            "total_jobs": total_jobs,
+            "approved_jobs": approved_jobs,
+            "rejected_jobs": rejected_jobs,
+            "completed_jobs": completed_jobs,
+            "assigned_jobs": assigned_jobs,
+
+            "county_labels": list(county_data.keys()),
+            "county_values": list(county_data.values()),
+
+            "contractor_labels": contractor_labels,
+            "contractor_jobs": contractor_jobs
+        }
+    )
+
+
+@app.get("/seed-admin")
+def seed_admin():
+
+    db = SessionLocal()
+
+    existing = db.query(Admin).filter(
+        Admin.email == "admin@test.com"
+    ).first()
+
+    if existing:
+
+        db.close()
+
+        return {
+            "message": "Admin already exists"
+        }
+
+    admin = Admin(
+        email="admin@test.com",
+        password="admin123"
+    )
+
+    db.add(admin)
+
+    db.commit()
+
+    db.close()
+
+    return {
+        "message": "Admin created"
+    }
+
+
+# ✅ SEED CONTRACTORS
+@app.get("/seed-contractors")
+def seed_contractors():
+
+    db = SessionLocal()
+
+    sample_contractors = [
+
+        {
+            "contractor_name": "Mike Services",
+            "email": "lwilks752@gmail.com",
+            "phone": "1111111111",
+            "county": "Essex County",
+            "password": "test123"
+        },
+
+        {
+            "contractor_name": "John Legal Services",
+            "email": "lwilks752@gmail.com",
+            "phone": "2222222222",
+            "county": "Hudson County",
+            "password": "test123"
+        },
+
+        {
+            "contractor_name": "NJ Process Servers",
+            "email": "lwilks752@gmail.com",
+            "phone": "3333333333",
+            "county": "Essex County",
+            "password": "test123"
+        },
+        {
+            "contractor_name": "BA Process Servers",
+            "email": "lwilks752@gmail.com",
+            "phone": "123456789",
+            "county": "NOIDA County",
+            "password": "test123"
+        }
+    ]
+
+    for c in sample_contractors:
+
+        contractor = Contractor(
+            contractor_name=c["contractor_name"],
+            email=c["email"],
+            phone=c["phone"],
+            county=c["county"],
+            password=c["password"]
+        )
+
+        db.add(contractor)
+
+    db.commit()
+
+    db.close()
+
+    return {"message": "Sample contractors added"}
