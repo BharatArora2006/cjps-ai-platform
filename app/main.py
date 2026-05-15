@@ -1,6 +1,6 @@
 print("✅ RUNNING MAIN.PY ✅")
 
-from fastapi import FastAPI, Request, Depends
+from fastapi import FastAPI, Request, Depends,BackgroundTasks
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, HTMLResponse
@@ -255,12 +255,14 @@ def dashboard(
 
         db.close()
 
+    success = request.query_params.get("success")
     return templates.TemplateResponse(
         name="dashboard.html",
         request=request,
         context={
             "jobs": jobs,
             "contractors": contractors,
+            "success": success,
             "search": search,
             "selected_status": status,
             "selected_county": county,
@@ -420,6 +422,7 @@ def upload_page(request: Request):
 @app.post("/upload")
 async def upload_files(
     request: Request,
+    background_tasks: BackgroundTasks,
     email_text: str = Form(...),
     files: list[UploadFile] = File(...)
 ):
@@ -434,15 +437,12 @@ async def upload_files(
 
         content = await file.read()
 
-        # os.makedirs("uploads", exist_ok=True)
-
         safe_filename = file.filename.lower()
 
         file_path = f"uploads/{safe_filename}"
-        print("======1FILE SAVED AT:", os.path.abspath(file_path))
         with open(file_path, "wb") as f:
             f.write(content)
-        print("========2FILE SAVED AT:", os.path.abspath(file_path))
+        print("FILE SAVED AT:", os.path.abspath(file_path))
 
         # Save first uploaded file path
         if not saved_file_path:
@@ -453,6 +453,7 @@ async def upload_files(
 
     # AI Extraction
     data = extract_job_data(email_text, full_pdf_text)
+    
     # AI SUMMARY
     summary = generate_case_summary(data)
 
@@ -464,7 +465,7 @@ async def upload_files(
     )
 
     return RedirectResponse(
-        url="/dashboard",
+        url="/dashboard?success=1",
         status_code=303
     )
 

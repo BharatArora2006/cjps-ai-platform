@@ -42,7 +42,7 @@ CJPS System
     msg["From"] = EMAIL
     msg["To"] = to_email
 
-    server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+    server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout = 15)
 
     server.starttls()
 

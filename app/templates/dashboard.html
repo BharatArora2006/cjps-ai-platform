@@ -254,6 +254,16 @@
             font-size:14px;
         }
 
+        .success-banner{
+            background:#d4edda;
+            color:#155724;
+            padding:15px;
+            border-radius:10px;
+            margin-bottom:20px;
+            font-weight:bold;
+            border:1px solid #c3e6cb;
+        }
+
         .small-text{
             color:#6b7280;
             font-size:13px;
@@ -302,6 +312,13 @@
         </a>
 
     </div>
+    {% if success %}
+
+    <div class="success-banner">
+        ✅ Job Submitted Successfully
+    </div>
+
+    {% endif %}
 
 
     <!-- STATS -->
@@ -378,6 +395,7 @@
             <button
                 class="btn btn-primary"
                 type="submit"
+                id="uploadBtn"
             >
                 Upload & Process
             </button>
@@ -725,6 +743,19 @@
 
     </div>
 
+    <script>
+
+    document.querySelector(".upload-form")
+    .addEventListener("submit", function() {
+
+        const btn = document.getElementById("uploadBtn");
+
+        btn.innerHTML = "⏳ Processing...";
+        btn.disabled = true;
+
+    });
+
+    </script>
 </body>
 
 </html>

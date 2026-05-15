@@ -51,11 +51,16 @@ def create_job(
 
         print("🔥 EMAIL FUNCTION CALLED")
 
-        send_assignment_email(
-            contractor.email,
-            contractor.contractor_name,
-            data
-        )
+        try:
+            send_assignment_email(
+                contractor.email,
+                contractor.contractor_name,
+                data
+            )
+
+        except Exception as e:
+
+            print("EMAIL ERROR:", e)
 
     db.close()
 
