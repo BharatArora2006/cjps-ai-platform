@@ -1,26 +1,28 @@
-import smtplib
-from email.mime.text import MIMEText
-
 import os
+import resend
+
 from dotenv import load_dotenv
 
 load_dotenv()
 
+# ✅ RESEND API KEY
+resend.api_key = os.getenv("RESEND_API_KEY")
 
-SMTP_SERVER = "smtp.gmail.com"
-SMTP_PORT = 587
 
-# EMAIL_ADDRESS = "lwilks752@gmail.com"
-# EMAIL_PASSWORD = "dzkmjglkabodokam"
+def send_assignment_email(
+    to_email,
+    contractor_name,
+    job_data
+):
 
-EMAIL = os.getenv("EMAIL")
-PASSWORD = os.getenv("PASSWORD")
+    try:
 
-def send_assignment_email(to_email, contractor_name, job_data):
+        subject = (
+            f"New Job Assigned - "
+            f"{job_data['county']}"
+        )
 
-    subject = f"New Job Assigned - {job_data['county']}"
-
-    body = f'''
+        body = f"""
 Hello {contractor_name},
 
 A new job has been assigned to you.
@@ -34,25 +36,23 @@ Please login to dashboard for details.
 
 Regards,
 CJPS System
-'''
+"""
 
-    msg = MIMEText(body)
+        response = resend.Emails.send({
 
-    msg["Subject"] = subject
-    msg["From"] = EMAIL
-    msg["To"] = to_email
+            "from": "CJPS <onboarding@resend.dev>",
 
-    server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout = 15)
+            "to": [to_email],
 
-    server.starttls()
+            "subject": subject,
 
-    server.login(
-        EMAIL,
-        PASSWORD
-    )
+            "text": body
 
-    server.send_message(msg)
+        })
 
-    server.quit()
+        print("✅ EMAIL SENT")
+        print(response)
 
-    print("✅ EMAIL SENT")
+    except Exception as e:
+
+        print("❌ EMAIL ERROR:", e)
