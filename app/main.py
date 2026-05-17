@@ -17,6 +17,7 @@ from app.modules.pdf_parser import extract_text_from_pdf
 from app.modules.ai_parser import extract_job_data
 from app.modules.job_service import create_job
 from app.modules.summary_service import generate_case_summary
+from app.modules.storage_service import upload_file_to_supabase
 
 from starlette.middleware.sessions import SessionMiddleware
 import os
@@ -419,6 +420,7 @@ def upload_page(request: Request):
 
 
 # ✅ HANDLE FILE UPLOAD
+
 @app.post("/upload")
 async def upload_files(
     request: Request,
@@ -433,31 +435,68 @@ async def upload_files(
 
     saved_file_path = None
 
+    print("FILES RECEIVED:", len(files))
+
     for file in files:
 
-        content = await file.read()
+        print("PROCESSING:", file.filename)
+
+        # RESET FILE POINTER
+        file.file.seek(0)
+
+        # READ FILE ONLY ONCE
+        file_bytes = file.file.read()
+
+        print("RAW BYTES:", len(file_bytes))
 
         safe_filename = file.filename.lower()
 
-        file_path = f"uploads/{safe_filename}"
+        # CREATE TEMP FOLDER
+        os.makedirs("temp", exist_ok=True)
+
+        file_path = f"temp/{safe_filename}"
+
+        # SAVE TEMP FILE
         with open(file_path, "wb") as f:
-            f.write(content)
-        print("FILE SAVED AT:", os.path.abspath(file_path))
+            f.write(file_bytes)
 
-        # Save first uploaded file path
+        print(
+            "LOCAL FILE SIZE:",
+            os.path.getsize(file_path)
+        )
+
+        # EXTRACT PDF TEXT
+        extracted_text = extract_text_from_pdf(
+            file_path
+        )
+
+        full_pdf_text += extracted_text
+
+        # UPLOAD TO SUPABASE
+        public_url = upload_file_to_supabase(
+            file_path,
+            safe_filename
+        )
+
+        print(
+            "SUPABASE FILE URL:",
+            public_url
+        )
+
+        # SAVE FIRST FILE URL
         if not saved_file_path:
-            saved_file_path = file_path
+            saved_file_path = public_url
 
-        # Extract text from PDF
-        full_pdf_text += extract_text_from_pdf(file_path)
+    # AI EXTRACTION
+    data = extract_job_data(
+        email_text,
+        full_pdf_text
+    )
 
-    # AI Extraction
-    data = extract_job_data(email_text, full_pdf_text)
-    
     # AI SUMMARY
     summary = generate_case_summary(data)
 
-    # Save Job
+    # SAVE JOB
     create_job(
         data,
         document_path=saved_file_path,
@@ -529,6 +568,7 @@ def contractor_jobs(
         }
     )
 
+# ✅ HANDLE UPDATE
 @app.post("/jobs/{job_id}/update-status")
 def update_job_status(
     job_id: int,

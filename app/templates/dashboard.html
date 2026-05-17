@@ -388,6 +388,7 @@
                 name="files"
                 multiple
                 required
+                
             >
 
             <br>
@@ -653,16 +654,8 @@
 
                     {% if job.document_path %}
 
-                    <a
-                        class="pdf-link"
-                        href="/{{ job.document_path }}"
-                        target="_blank"
-                    >
-
-                        <button class="btn btn-dark pdf-btn">
-                            📄 PDF
-                        </button>
-
+                    <a href="{{ job.document_path }}" target="_blank" style="display:inline-block;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:white;padding:12px 18px;border-radius:12px;text-decoration:none;font-weight:bold;font-size:14px;box-shadow:0 4px 10px rgba(37,99,235,0.3);">
+                        📄 View PDF
                     </a>
 
                     {% else %}
