@@ -1,5 +1,5 @@
 from app.db.database import SessionLocal
-from app.db.models import Contractor
+from app.db.models import Contractor,AttemptLog
 
 
 def assign_contractor(county: str):

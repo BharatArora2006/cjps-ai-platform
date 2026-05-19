@@ -2,8 +2,12 @@ from sqlalchemy import (
     Column,
     Integer,
     String,
-    DateTime
+    DateTime,
+    ForeignKey,
+    Text
 )
+from sqlalchemy.sql import func
+
 from app.db.database import Base
 from datetime import datetime
 
@@ -45,6 +49,54 @@ class Contractor(Base):
     active_jobs = Column(Integer, default=0)
     status = Column(String, default="Active")
     password = Column(String)
+
+class AttemptLog(Base):
+
+    __tablename__ = "attempt_logs"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    job_id = Column(
+        Integer,
+        ForeignKey("jobs.id")
+    )
+
+    contractor_id = Column(
+        Integer,
+        ForeignKey("contractors.id")
+    )
+
+    attempt_number = Column(
+        Integer,
+        default=1
+    )
+
+    status = Column(
+        String,
+        default="Attempted"
+    )
+
+    raw_notes = Column(
+        Text
+    )
+
+    ai_rewritten_notes = Column(
+        Text
+    )
+
+    photo_path = Column(
+        String,
+        nullable=True
+    )
+
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now()
+    )
 
 class AuditLog(Base):
 

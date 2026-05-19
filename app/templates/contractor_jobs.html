@@ -132,6 +132,27 @@
 
 
     <div class="table-container">
+        <h2>Assigned Jobs</h2>
+        {% if request.query_params.get('attempt_success') %}
+
+        <div
+            style="
+                background:#dcfce7;
+                color:#166534;
+                padding:14px;
+                border-radius:12px;
+                margin-bottom:20px;
+                font-weight:bold;
+                border:1px solid #86efac;
+            "
+        >
+
+            ✅ Attempt submitted successfully
+
+        </div>
+
+        {% endif %}
+
 
         <table>
 
@@ -188,9 +209,19 @@
                     {% if job.document_path %}
 
                     <a
-                        class="btn-pdf"
-                        href="/{{ job.document_path }}"
+                        href="{{ job.document_path }}"
                         target="_blank"
+                        style="
+                            display:inline-block;
+                            background:linear-gradient(135deg,#2563eb,#1d4ed8);
+                            color:white;
+                            padding:12px 18px;
+                            border-radius:12px;
+                            text-decoration:none;
+                            font-weight:bold;
+                            font-size:14px;
+                            box-shadow:0 4px 10px rgba(37,99,235,0.3);
+                        "
                     >
                         📄 View PDF
                     </a>
@@ -245,6 +276,251 @@
 
                 </td>
 
+                <td>
+
+                    <!-- ATTEMPT FORM -->
+
+                    <form
+                        action="/log-attempt/{{ job.id }}"
+                        method="post"
+                        style="
+                            padding:10px;
+                            border-radius:10px;
+                            background:#f8fafc;
+                            min-width:250px;
+                        "
+                    >
+
+                        <select
+                            name="status"
+                            required
+                            style="
+                                width:100%;
+                                padding:8px;
+                                margin-bottom:8px;
+                                border-radius:8px;
+                            "
+                        >
+
+                            <option value="">
+                                Status
+                            </option>
+
+                            <option value="Attempted">
+                                Attempted
+                            </option>
+
+                            <option value="Completed">
+                                Completed
+                            </option>
+
+                            <option value="No Answer">
+                                No Answer
+                            </option>
+
+                            <option value="Bad Address">
+                                Bad Address
+                            </option>
+
+                        </select>
+
+                        <textarea
+
+                            name="raw_notes"
+
+                            placeholder="Attempt notes..."
+
+                            required
+
+                            style="
+                                width:100%;
+                                height:80px;
+                                padding:8px;
+                                border-radius:8px;
+                                margin-bottom:8px;
+                            "
+
+                        ></textarea>
+
+                        <button
+
+                            type="submit"
+
+                            style="
+                                width:100%;
+                                background:#2563eb;
+                                color:white;
+                                border:none;
+                                padding:10px;
+                                border-radius:8px;
+                                font-weight:bold;
+                                cursor:pointer;
+                            "
+
+                        >
+
+                            Submit Attempt
+
+                        </button>
+
+                    </form>
+
+
+                    <!-- ATTEMPT TABS -->
+
+                    <div
+                        style="
+                            display:flex;
+                            gap:8px;
+                            margin-top:18px;
+                            flex-wrap:wrap;
+                        "
+                    >
+
+                        {% for attempt in attempts %}
+
+                            {% if attempt.job_id == job.id %}
+
+                            <button
+                                type="button"
+                                onclick="showAttempt('{{ attempt.id }}')"
+                                style="
+                                    background:#2563eb;
+                                    color:white;
+                                    border:none;
+                                    padding:8px 14px;
+                                    border-radius:8px;
+                                    cursor:pointer;
+                                    font-weight:bold;
+                                    font-size:13px;
+                                "
+                            >
+
+                                Attempt {{ attempt.attempt_number }}
+
+                            </button>
+
+                            {% endif %}
+
+                        {% endfor %}
+
+                    </div>
+
+
+                    <!-- ATTEMPT DETAILS -->
+
+                    {% for attempt in attempts %}
+
+                        {% if attempt.job_id == job.id %}
+
+                        <div
+                            id="attempt-{{ attempt.id }}"
+                            class="attempt-box"
+                            style="
+                                display:none;
+                                background:white;
+                                border-radius:12px;
+                                padding:14px;
+                                margin-top:14px;
+                                box-shadow:0 2px 8px rgba(0,0,0,0.08);
+                                border-left:5px solid #2563eb;
+                            "
+                        >
+
+                            <div
+                                style="
+                                    display:flex;
+                                    justify-content:space-between;
+                                    margin-bottom:10px;
+                                    align-items:center;
+                                "
+                            >
+
+                                <strong>
+                                    Attempt #{{ attempt.attempt_number }}
+                                </strong>
+
+                                <span
+                                    style="
+                                        background:#dcfce7;
+                                        color:#166534;
+                                        padding:4px 10px;
+                                        border-radius:20px;
+                                        font-size:12px;
+                                        font-weight:bold;
+                                    "
+                                >
+                                    {{ attempt.status }}
+                                </span>
+
+                            </div>
+
+                            <div
+                                style="
+                                    font-size:13px;
+                                    color:gray;
+                                    margin-bottom:10px;
+                                "
+                            >
+
+                                {{ attempt.created_at }}
+
+                            </div>
+
+
+                            <!-- RAW NOTE -->
+
+                            <div
+                                style="
+                                    background:#f8fafc;
+                                    padding:10px;
+                                    border-radius:10px;
+                                    margin-bottom:10px;
+                                "
+                            >
+
+                                <strong>
+                                    Raw Note
+                                </strong>
+
+                                <div style="margin-top:6px;">
+
+                                    {{ attempt.raw_notes }}
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- AI NOTE -->
+
+                            <div
+                                style="
+                                    background:#eff6ff;
+                                    padding:10px;
+                                    border-radius:10px;
+                                "
+                            >
+
+                                <strong>
+                                    AI Note
+                                </strong>
+
+                                <div style="margin-top:6px;">
+
+                                    {{ attempt.ai_rewritten_notes }}
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        {% endif %}
+
+                    {% endfor %}
+
+                </td>
             </tr>
 
             {% endfor %}
@@ -252,3 +528,33 @@
         </table>
 
     </div>
+<script>
+
+function showAttempt(id) {
+
+    document
+        .querySelectorAll(".attempt-box")
+        .forEach(box => {
+            box.style.display = "none";
+        });
+
+    document.getElementById(
+        "attempt-" + id
+    ).style.display = "block";
+}
+
+window.onload = function() {
+
+    const first =
+        document.querySelector(".attempt-box");
+
+    if (first) {
+
+        first.style.display = "block";
+    }
+};
+
+</script>
+
+</body>
+</html>

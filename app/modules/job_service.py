@@ -1,5 +1,5 @@
 from app.db.database import SessionLocal
-from app.db.models import Job, Contractor
+from app.db.models import Job, Contractor,AttemptLog
 
 from app.modules.assignment_service import assign_contractor
 from app.modules.notification_service import send_assignment_email

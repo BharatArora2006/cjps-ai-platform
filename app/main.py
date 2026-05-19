@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
 from app.db.database import SessionLocal, engine
-from app.db.models import Job, Contractor, Admin, Base, AuditLog
+from app.db.models import Job, Contractor, Admin, Base, AuditLog, AttemptLog
 
 from app.modules.email_reader import read_email
 from app.modules.pdf_parser import extract_text_from_pdf
@@ -18,6 +18,8 @@ from app.modules.ai_parser import extract_job_data
 from app.modules.job_service import create_job
 from app.modules.summary_service import generate_case_summary
 from app.modules.storage_service import upload_file_to_supabase
+from app.modules.attempt_service import create_attempt_log
+from app.modules.ai_note_service import rewrite_attempt_note
 
 from starlette.middleware.sessions import SessionMiddleware
 import os
@@ -542,6 +544,10 @@ def contractor_jobs(
         Contractor.id == contractor_id
     ).first()
 
+    attempts = db.query(
+        AttemptLog
+    ).all()
+
     jobs = []
 
     
@@ -564,7 +570,8 @@ def contractor_jobs(
         request=request,
         context={
             "jobs": jobs,
-            "contractor": contractor
+            "contractor": contractor,
+            "attempts": attempts
         }
     )
 
@@ -602,7 +609,7 @@ def update_job_status(
     db.close()
 
     return RedirectResponse(
-        url=f"/contractor/{contractor_id}/jobs",
+        url="/my-jobs",
         status_code=303
     )
 
@@ -632,15 +639,26 @@ def login(
     db.close()
 
     if contractor:
+
+        # CLEAR OLD SESSION
         request.session.clear()
+
+        # SAVE CONTRACTOR SESSION
         request.session["contractor_id"] = contractor.id
+
+        print(
+            "SESSION SAVED:",
+            request.session.get("contractor_id")
+        )
 
         return RedirectResponse(
             url="/my-jobs",
             status_code=303
         )
 
-    return HTMLResponse("Invalid credentials")
+    return HTMLResponse(
+        "Invalid credentials"
+    )
 
 @app.get("/my-jobs")
 def my_jobs(request: Request):
@@ -810,6 +828,80 @@ def analytics_dashboard(
     )
 
 
+@app.post("/log-attempt/{job_id}")
+async def log_attempt(
+
+    job_id: int,
+
+    request: Request,
+
+    status: str = Form(...),
+
+    raw_notes: str = Form(...)
+
+):
+
+    # ✅ GET CONTRACTOR FROM SESSION
+    contractor_id = request.session.get(
+        "contractor_id"
+    )
+
+    print(
+        "SESSION CONTRACTOR ID:",
+        contractor_id
+    )
+
+    # ✅ IF NOT LOGGED IN
+    if not contractor_id:
+
+        return RedirectResponse(
+            url="/login",
+            status_code=303
+        )
+
+    db = SessionLocal()
+
+    # ✅ COUNT EXISTING ATTEMPTS
+    existing_attempts = db.query(
+        AttemptLog
+    ).filter(
+        AttemptLog.job_id == job_id
+    ).count()
+
+    attempt_number = existing_attempts + 1
+
+    # ✅ AI REWRITE
+    ai_note = rewrite_attempt_note(
+        raw_notes
+    )
+    print("AI NOTE:", ai_note)
+    # ✅ SAVE ATTEMPT
+    create_attempt_log(
+
+        job_id=job_id,
+
+        contractor_id=contractor_id,
+
+        attempt_number=attempt_number,
+
+        status=status,
+
+        raw_notes=raw_notes,
+
+        ai_rewritten_notes=ai_note
+
+    )
+
+    db.close()
+
+    # ✅ SUCCESS REDIRECT
+    return RedirectResponse(
+
+        url="/my-jobs?attempt_success=1",
+
+        status_code=303
+
+    )
 @app.get("/seed-admin")
 def seed_admin():
 
