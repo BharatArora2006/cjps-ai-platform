@@ -164,6 +164,7 @@
                 <th>Status</th>
                 <th>Document</th>
                 <th>Actions</th>
+                <th>Attempt Logging</th>
             </tr>
 
             {% for job in jobs %}
@@ -279,6 +280,16 @@
                 <td>
 
                     <!-- ATTEMPT FORM -->
+
+                    <div
+                        style="
+                            font-size:13px;
+                            color:gray;
+                            margin-bottom:14px;
+                        "
+                    >
+                        Submit up to 4 service attempts with notes.
+                    </div>
 
                     <form
                         action="/log-attempt/{{ job.id }}"
