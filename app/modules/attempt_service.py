@@ -9,7 +9,8 @@ def create_attempt_log(
     attempt_number,
     status,
     raw_notes,
-    ai_rewritten_notes
+    ai_rewritten_notes,
+    photo_path=None
 
 ):
 
@@ -27,7 +28,9 @@ def create_attempt_log(
 
         raw_notes=raw_notes,
 
-        ai_rewritten_notes=ai_rewritten_notes
+        ai_rewritten_notes=ai_rewritten_notes,
+
+        photo_path=photo_path
 
     )
 

@@ -30,6 +30,7 @@ def create_job(
     # Create job
     job = Job(
         client_name=data["client_name"],
+        client_email=data.get("client_email"),
         defendant_name=data["defendant_name"],
         address=data["address"],
         county=data["county"],

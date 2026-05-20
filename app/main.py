@@ -17,9 +17,10 @@ from app.modules.pdf_parser import extract_text_from_pdf
 from app.modules.ai_parser import extract_job_data
 from app.modules.job_service import create_job
 from app.modules.summary_service import generate_case_summary
-from app.modules.storage_service import upload_file_to_supabase
+from app.modules.storage_service import upload_file_to_supabase, upload_attempt_photo_to_supabase
 from app.modules.attempt_service import create_attempt_log
 from app.modules.ai_note_service import rewrite_attempt_note
+from app.modules.client_update_service import send_client_attempt_update
 
 from starlette.middleware.sessions import SessionMiddleware
 import os
@@ -468,6 +469,8 @@ async def upload_files(
         )
 
         # EXTRACT PDF TEXT
+        print("FILE PATH:", file_path)
+        print("FILE SIZE:", os.path.getsize(file_path))
         extracted_text = extract_text_from_pdf(
             file_path
         )
@@ -497,6 +500,7 @@ async def upload_files(
 
     # AI SUMMARY
     summary = generate_case_summary(data)
+    # summary = "Test Summary"
 
     # SAVE JOB
     create_job(
@@ -544,9 +548,37 @@ def contractor_jobs(
         Contractor.id == contractor_id
     ).first()
 
-    attempts = db.query(
+    attempts_db = db.query(
         AttemptLog
     ).all()
+
+    attempts = []
+
+    for a in attempts_db:
+
+        attempts.append({
+
+            "id": a.id,
+
+            "job_id": a.job_id,
+
+            "attempt_number": a.attempt_number,
+
+            "status": a.status,
+
+            "raw_notes": a.raw_notes,
+
+            "ai_rewritten_notes": a.ai_rewritten_notes,
+
+            "photo_path": a.photo_path,
+
+            "created_at": (
+                a.created_at.strftime("%Y-%m-%d %H:%M")
+                if a.created_at
+                else ""
+            )
+
+        })
 
     jobs = []
 
@@ -827,7 +859,6 @@ def analytics_dashboard(
         }
     )
 
-
 @app.post("/log-attempt/{job_id}")
 async def log_attempt(
 
@@ -837,11 +868,12 @@ async def log_attempt(
 
     status: str = Form(...),
 
-    raw_notes: str = Form(...)
+    raw_notes: str = Form(...),
+
+    photo: UploadFile = File(None)
 
 ):
 
-    # ✅ GET CONTRACTOR FROM SESSION
     contractor_id = request.session.get(
         "contractor_id"
     )
@@ -851,7 +883,6 @@ async def log_attempt(
         contractor_id
     )
 
-    # ✅ IF NOT LOGGED IN
     if not contractor_id:
 
         return RedirectResponse(
@@ -861,7 +892,6 @@ async def log_attempt(
 
     db = SessionLocal()
 
-    # ✅ COUNT EXISTING ATTEMPTS
     existing_attempts = db.query(
         AttemptLog
     ).filter(
@@ -870,12 +900,45 @@ async def log_attempt(
 
     attempt_number = existing_attempts + 1
 
-    # ✅ AI REWRITE
+    # AI NOTE REWRITE
     ai_note = rewrite_attempt_note(
         raw_notes
     )
+
     print("AI NOTE:", ai_note)
-    # ✅ SAVE ATTEMPT
+
+    # PHOTO UPLOAD
+    photo_path = None
+
+    if photo and photo.filename:
+
+        os.makedirs(
+            "temp",
+            exist_ok=True
+        )
+
+        temp_path = (
+            f"temp/{photo.filename}"
+        )
+
+        contents = await photo.read()
+
+        with open(temp_path, "wb") as f:
+            f.write(contents)
+
+        photo_path = (
+            upload_attempt_photo_to_supabase(
+                temp_path,
+                photo.filename
+            )
+        )
+
+        print(
+            "SUPABASE PHOTO URL:",
+            photo_path
+        )
+
+    # SAVE ATTEMPT
     create_attempt_log(
 
         job_id=job_id,
@@ -888,20 +951,42 @@ async def log_attempt(
 
         raw_notes=raw_notes,
 
-        ai_rewritten_notes=ai_note
+        ai_rewritten_notes=ai_note,
+
+        photo_path=photo_path
 
     )
 
+    job = db.query(Job).filter(
+        Job.id == job_id
+    ).first()
+
+    if job and job.client_email:
+
+        send_client_attempt_update(
+
+            client_email=job.client_email,
+
+            job_id=job.id,
+
+            status=status,
+
+            ai_notes=ai_note,
+
+            photo_url=photo_path
+
+        )
+
     db.close()
 
-    # ✅ SUCCESS REDIRECT
     return RedirectResponse(
 
-        url="/my-jobs?attempt_success=1",
+        url=f"/contractor/{contractor_id}/jobs?attempt_success=1",
 
         status_code=303
 
     )
+
 @app.get("/seed-admin")
 def seed_admin():
 

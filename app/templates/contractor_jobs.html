@@ -294,6 +294,7 @@
                     <form
                         action="/log-attempt/{{ job.id }}"
                         method="post"
+                        enctype="multipart/form-data"
                         style="
                             padding:10px;
                             border-radius:10px;
@@ -352,6 +353,16 @@
                             "
 
                         ></textarea>
+                        
+                        <input
+                            type="file"
+                            name="photo"
+                            accept="image/*"
+                            style="
+                                width:100%;
+                                margin-bottom:10px;
+                            "
+                        >
 
                         <button
 
@@ -516,6 +527,21 @@
                                 <strong>
                                     AI Note
                                 </strong>
+                                
+                                {% if attempt.photo_path %}
+
+                                <img
+                                    src="{{ attempt.photo_path }}"
+                                    style="
+                                        width:220px;
+                                        border-radius:12px;
+                                        margin-top:12px;
+                                        border:1px solid #ddd;
+                                    "
+                                >
+
+                                {% endif %}
+
 
                                 <div style="margin-top:6px;">
 

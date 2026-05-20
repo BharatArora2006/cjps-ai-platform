@@ -17,6 +17,7 @@ class Job(Base):
     id = Column(Integer, primary_key=True, index=True)
 
     client_name = Column(String)
+    client_email = Column(String)
     defendant_name = Column(String)
     address = Column(String)
     county = Column(String)
