@@ -1,14 +1,9 @@
 import os
-
-from reportlab.platypus import (
-    SimpleDocTemplate,
-    Paragraph,
-    Spacer
-)
-
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
-
 from reportlab.lib.pagesizes import letter
+from app.modules.storage_service import upload_affidavit_to_supabase
+
 
 
 def generate_affidavit_pdf(
@@ -25,15 +20,12 @@ def generate_affidavit_pdf(
     )
 
     filename = (
-        f"affidavit_job_{job.id}.pdf"
+        f"generated_affidavits/affidavit_job_{job.id}.pdf"
     )
 
-    filepath = (
-        f"generated_affidavits/{filename}"
-    )
-
+    
     doc = SimpleDocTemplate(
-        filepath,
+        filename,
         pagesize=letter
     )
 
@@ -108,4 +100,16 @@ def generate_affidavit_pdf(
 
     doc.build(elements)
 
-    return filepath
+    supabase_url = (
+        upload_affidavit_to_supabase(
+            filename,
+            os.path.basename(filename)
+        )
+    )
+
+    print(
+        "AFFIDAVIT UPLOADED:",
+        supabase_url
+    )
+
+    return supabase_url
