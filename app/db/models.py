@@ -26,6 +26,7 @@ class Job(Base):
     status = Column(String, default="Pending")
     summary = Column(String)
     document_path = Column(String, nullable=True)
+    affidavit_path = Column(String, nullable=True)
     created_at = Column(DateTime,default=datetime.utcnow)
 
 

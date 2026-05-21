@@ -228,6 +228,31 @@
                     </a>
 
                     {% endif %}
+
+                    <br><br>
+
+
+                    {% if job.affidavit_path %}
+
+                    <a
+                        href="/{{ job.affidavit_path }}"
+                        target="_blank"
+                        style="
+                            display:inline-block;
+                            background:#16a34a;
+                            color:white;
+                            padding:12px 18px;
+                            border-radius:12px;
+                            text-decoration:none;
+                            font-weight:bold;
+                            font-size:14px;
+                            box-shadow:0 4px 10px rgba(22,163,74,0.3);
+                        "
+                    >
+                        📑 View Affidavit
+                    </a>
+
+                    {% endif %}
                 </td>
 
                 <td>

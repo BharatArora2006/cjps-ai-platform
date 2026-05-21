@@ -21,6 +21,8 @@ from app.modules.storage_service import upload_file_to_supabase, upload_attempt_
 from app.modules.attempt_service import create_attempt_log
 from app.modules.ai_note_service import rewrite_attempt_note
 from app.modules.client_update_service import send_client_attempt_update
+from app.modules.affidavit_service import generate_affidavit_pdf
+
 
 from starlette.middleware.sessions import SessionMiddleware
 import os
@@ -38,6 +40,16 @@ app.mount(
     StaticFiles(directory="uploads"),
     name="uploads"
     )
+
+os.makedirs(
+    "generated_affidavits",
+    exist_ok=True
+)
+app.mount(
+    "/generated_affidavits",
+    StaticFiles(directory="generated_affidavits"),
+    name="generated_affidavits"
+)
 
 # ✅ CORS
 app.add_middleware(
@@ -592,10 +604,15 @@ def contractor_jobs(
             "defendant_name": j.defendant_name,
             "address": j.address,
             "status": j.status,
-            "document_path": j.document_path
+            "document_path": j.document_path,
+            "affidavit_path": j.affidavit_path
         })
 
     db.close()
+
+    for job in jobs:
+        print("JOB:", job["id"])
+        print("AFFIDAVIT:", job.get("affidavit_path"))
 
     return templates.TemplateResponse(
         name="contractor_jobs.html",
@@ -621,7 +638,40 @@ def update_job_status(
     ).first()
 
     if job:
+
         job.status = status
+
+    # AUTO AFFIDAVIT
+    if status == "Completed":
+
+        contractor = db.query(
+            Contractor
+        ).filter(
+            Contractor.id == job.contractor_id
+        ).first()
+
+        latest_attempt = db.query(
+            AttemptLog
+        ).filter(
+            AttemptLog.job_id == job.id
+        ).order_by(
+            AttemptLog.id.desc()
+        ).first()
+
+        if contractor and latest_attempt:
+
+            affidavit_path = (
+                generate_affidavit_pdf(
+                    job,
+                    contractor,
+                    latest_attempt
+                )
+            )
+
+            job.affidavit_path = (
+                affidavit_path
+            )
+
         # ✅ CREATE AUDIT LOG
         log = AuditLog(
             action=f"Status changed to {status}",
