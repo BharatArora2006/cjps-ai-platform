@@ -639,7 +639,18 @@ def update_job_status(
 
     if job:
 
+       
+        print("OLD STATUS:", job.status)
+
         job.status = status
+
+        print("NEW STATUS:", status)
+
+        db.commit()
+
+        db.refresh(job)
+
+        print("UPDATED STATUS:", job.status)
 
     # AUTO AFFIDAVIT
     if status == "Completed":
@@ -682,6 +693,7 @@ def update_job_status(
         db.add(log)
         
         db.commit()
+        # print("UPDATED STATUS:", job.status)
 
         contractor_id = job.contractor_id
 
