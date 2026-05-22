@@ -661,21 +661,21 @@ def update_job_status(
             Contractor.id == job.contractor_id
         ).first()
 
-        latest_attempt = db.query(
+        attempts = db.query(
             AttemptLog
         ).filter(
             AttemptLog.job_id == job.id
         ).order_by(
-            AttemptLog.id.desc()
-        ).first()
+            AttemptLog.attempt_number.asc()
+        ).all()
 
-        if contractor and latest_attempt:
+        if contractor and attempts:
 
             affidavit_path = (
                 generate_affidavit_pdf(
                     job,
                     contractor,
-                    latest_attempt
+                    attempts
                 )
             )
 

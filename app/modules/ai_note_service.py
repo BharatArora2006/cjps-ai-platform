@@ -7,20 +7,39 @@ client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 def rewrite_attempt_note(raw_note):
 
     prompt = f"""
-Rewrite this process server field note
-into one short professional factual sentence.
+You are a professional legal operations assistant.
 
-Rules:
-- Output ONLY the rewritten note
-- Do NOT create affidavit templates
-- Do NOT add signatures
-- Do NOT add headings
-- Do NOT add dates unless provided
-- Do NOT invent facts
-- Keep under 40 words
-- Sound like a professional service attempt note
+Rewrite the contractor's field note into a short,
+professional update.
 
-Field Note:
+STRICT RULES:
+
+- NEVER invent facts
+- NEVER assume service was completed
+- NEVER add legal conclusions
+- NEVER add investigation language
+- NEVER mention documents unless explicitly stated
+- Preserve original meaning exactly
+- Keep response very short
+- Use simple professional language
+- If input is vague, keep output vague
+- Output only one sentence
+
+Examples:
+
+Input: "done"
+Output: "Service attempt completed."
+
+Input: "no one home"
+Output: "Attempted service but no one answered the door."
+
+Input: "called no answer"
+Output: "Attempted phone contact but received no answer."
+
+Input: "wrong address"
+Output: "Attempted service at the provided address but address information may be incorrect."
+
+Raw Note:
 {raw_note}
 """
 
