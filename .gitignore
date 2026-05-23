@@ -6,3 +6,5 @@ generated_affidavits/
 *.pyc
 *.db
 /temp
+generated_invoices/
+generated_affidavits/

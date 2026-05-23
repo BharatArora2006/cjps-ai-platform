@@ -319,6 +319,23 @@
     </div>
 
     {% endif %}
+    
+    {% if invoice_approved %}
+    <div
+        style="
+            background:#dcfce7;
+            color:#166534;
+            padding:16px;
+            border-radius:12px;
+            margin-bottom:20px;
+            font-weight:bold;
+            border:1px solid #bbf7d0;
+        "
+    >
+        ✅ Invoice Approved Successfully
+    </div>
+
+    {% endif %}
 
 
     <!-- STATS -->
@@ -537,6 +554,10 @@
 
                 <th>Document</th>
 
+                <th>Affidavit</th>
+
+                <th>Invoice</th>
+
                 <th>Actions</th>
 
             </tr>
@@ -562,8 +583,6 @@
                     {{ job.county }}
                 </td>
 
-
-                <!-- SUMMARY -->
                 <td>
 
                     <div class="summary-box">
@@ -572,14 +591,10 @@
 
                 </td>
 
-
-                <!-- CONTRACTOR -->
                 <td>
                     {{ job.contractor_name }}
                 </td>
 
-
-                <!-- STATUS -->
                 <td>
 
                     {% if job.status == 'Assigned' %}
@@ -622,14 +637,10 @@
 
                 </td>
 
-
-                <!-- CREATED -->
                 <td>
                     {{ job.created_at }}
                 </td>
 
-
-                <!-- SLA -->
                 <td>
 
                     {% if job.is_overdue %}
@@ -648,8 +659,6 @@
 
                 </td>
 
-
-                <!-- PDF -->
                 <td>
 
                     {% if job.document_path %}
@@ -671,7 +680,7 @@
                     >
                         📄 View PDF
                     </a>
-
+                
                     {% else %}
 
                         <span class="small-text">
@@ -679,33 +688,118 @@
                         </span>
 
                     {% endif %}
-
                 </td>
-
-                {% if job.affidavit_path %}
-
-                <a
-                    href="/{{ job.affidavit_path }}"
-                    target="_blank"
-                    style="
-                        display:inline-block;
-                        margin-top:10px;
-                        background:#16a34a;
-                        color:white;
-                        padding:10px 14px;
-                        border-radius:8px;
-                        text-decoration:none;
-                        font-weight:bold;
-                    "
-                >
-                    📑 View Affidavit
-                </a>
-
-                {% endif %}
-
-                <!-- ACTIONS -->
+                
                 <td>
 
+                    {% if job.affidavit_path %}
+
+                        <a
+                            href="{{ job.affidavit_path }}"
+                            target="_blank"
+                            style="
+                                display:inline-block;
+                                margin-top:10px;
+                                background:#16a34a;
+                                color:white;
+                                padding:10px 14px;
+                                border-radius:8px;
+                                text-decoration:none;
+                                font-weight:bold;
+                            "
+                        >
+                            📑 View Affidavit
+                        </a>
+
+                    {% else %}
+
+                        <span class="small-text">
+                            No Affidavit
+                        </span>
+
+                    {% endif %}
+                    
+                </td>
+
+                <!-- INVOICE -->
+                <td>
+
+                    {% if job.invoice_path %}
+
+                        <a
+                            href="{{ job.invoice_path }}"
+                            target="_blank"
+                            style="
+                                display:inline-block;
+                                background:#2563eb;
+                                color:white;
+                                padding:10px 14px;
+                                border-radius:10px;
+                                text-decoration:none;
+                                font-weight:bold;
+                                margin-bottom:12px;
+                                box-shadow:0 4px 10px rgba(37,99,235,0.25);
+                            "
+                        >
+                            💰 View Invoice
+                        </a>
+
+                        <br>
+
+                        {% if not job.invoice_approved %}
+
+                        <form
+                            action="/jobs/{{ job.id }}/approve-invoice"
+                            method="post"
+                        >
+
+                            <button
+                                type="submit"
+                                style="
+                                    background:linear-gradient(135deg,#16a34a,#15803d);
+                                    color:white;
+                                    border:none;
+                                    padding:10px 16px;
+                                    border-radius:10px;
+                                    font-weight:bold;
+                                    cursor:pointer;
+                                    width:100%;
+                                    box-shadow:0 4px 10px rgba(22,163,74,0.25);
+                                "
+                            >
+                                ✅ Approve Invoice
+                            </button>
+
+                        </form>
+
+                        {% else %}
+
+                        <div
+                            style="
+                                background:#dcfce7;
+                                color:#166534;
+                                padding:10px;
+                                border-radius:10px;
+                                font-weight:bold;
+                                text-align:center;
+                            "
+                        >
+                            ✅ Approved
+                        </div>
+
+                        {% endif %}
+
+                    {% else %}
+
+                        <span class="small-text">
+                            No Invoice
+                        </span>
+
+                    {% endif %}
+
+                </td>
+                
+                <td>
                     <div class="action-buttons">
 
                         <!-- APPROVE -->

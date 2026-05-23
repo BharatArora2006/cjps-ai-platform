@@ -7,23 +7,20 @@ client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 def rewrite_attempt_note(raw_note):
 
     prompt = f"""
-You are a professional legal operations assistant.
+YYou are a legal process service assistant.
 
-Rewrite the contractor's field note into a short,
-professional update.
+Rewrite the contractor note professionally.
 
-STRICT RULES:
+IMPORTANT RULES:
 
 - NEVER invent facts
-- NEVER assume service was completed
+- NEVER assume service completed unless explicitly stated
 - NEVER add legal conclusions
-- NEVER add investigation language
-- NEVER mention documents unless explicitly stated
-- Preserve original meaning exactly
-- Keep response very short
-- Use simple professional language
-- If input is vague, keep output vague
-- Output only one sentence
+- NEVER mention another party unless explicitly written
+- Keep the meaning extremely close to the original note
+- If the note is short or vague, keep it simple and factual
+- Use one sentence only
+- Professional legal tone
 
 Examples:
 

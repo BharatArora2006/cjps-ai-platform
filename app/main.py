@@ -22,6 +22,9 @@ from app.modules.attempt_service import create_attempt_log
 from app.modules.ai_note_service import rewrite_attempt_note
 from app.modules.client_update_service import send_client_attempt_update
 from app.modules.affidavit_service import generate_affidavit_pdf
+from app.modules.invoice_service import generate_invoice_pdf
+from app.modules.final_package_service import send_final_package
+
 
 
 from starlette.middleware.sessions import SessionMiddleware
@@ -159,6 +162,8 @@ def dashboard(
 
     db = SessionLocal()
 
+    invoice_approved = request.query_params.get("invoice_approved")
+
     try:
 
         # ✅ JOB QUERY
@@ -257,6 +262,8 @@ def dashboard(
                 "status": j.status,
                 "contractor_name": contractor_name,
                 "document_path": j.document_path,
+                "affidavit_path": j.affidavit_path,
+                "invoice_path": j.invoice_path,
                 "is_overdue": is_overdue,
                 "created_at": (
                     j.created_at.strftime("%Y-%m-%d")
@@ -282,7 +289,8 @@ def dashboard(
             "search": search,
             "selected_status": status,
             "selected_county": county,
-            "selected_contractor": contractor_id
+            "selected_contractor": contractor_id,
+            "invoice_approved": invoice_approved
         }
     )
 
@@ -682,6 +690,20 @@ def update_job_status(
             job.affidavit_path = (
                 affidavit_path
             )
+        
+            print("AFFIDAVIT SAVED")
+
+            invoice_url = (
+                generate_invoice_pdf(
+                    job,
+                    contractor
+                )
+            )
+
+            job.invoice_path = (
+                invoice_url
+            )
+            print("INVOICE SAVED")
 
         # ✅ CREATE AUDIT LOG
         log = AuditLog(
@@ -1049,6 +1071,70 @@ async def log_attempt(
 
     )
 
+@app.post("/jobs/{job_id}/send-final-package")
+def send_final_package_route(
+    job_id: int
+):
+
+    db = SessionLocal()
+
+    job = db.query(Job).filter(
+        Job.id == job_id
+    ).first()
+
+    if job:
+
+        send_final_package(
+
+            client_email=job.client_email,
+
+            client_name=job.client_name,
+
+            affidavit_url=job.affidavit_path,
+
+            invoice_url=job.invoice_path,
+
+            job_id=job.id
+
+        )
+
+        job.invoice_status = "Sent"
+
+        db.commit()
+
+    db.close()
+
+    return RedirectResponse(
+        url="/dashboard",
+        status_code=303
+    )
+# AFFIDAVIT APPROVAL
+@app.post("/jobs/{job_id}/approve-invoice")
+def approve_invoice(
+    job_id: int
+):
+
+    db = SessionLocal()
+
+    job = db.query(Job).filter(
+        Job.id == job_id
+    ).first()
+
+    if job:
+
+        job.invoice_approved = True
+
+        db.commit()
+
+    db.close()
+
+    return RedirectResponse(
+        url="/dashboard?invoice_approved=1",
+        status_code=303
+    )
+
+
+# DUMMY SETUP
 @app.get("/seed-admin")
 def seed_admin():
 

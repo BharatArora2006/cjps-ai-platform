@@ -4,7 +4,9 @@ from sqlalchemy import (
     String,
     DateTime,
     ForeignKey,
-    Text
+    Text,
+    Float,
+    Boolean
 )
 from sqlalchemy.sql import func
 
@@ -27,6 +29,11 @@ class Job(Base):
     summary = Column(String)
     document_path = Column(String, nullable=True)
     affidavit_path = Column(String, nullable=True)
+    invoice_path = Column(String, nullable=True)
+    invoice_amount = Column(Float, default=75.0)
+    invoice_status = Column(String,default="Pending")
+    invoice_approved = Column(Boolean, default=False)
+    invoice_sent = Column(Boolean, default=False)
     created_at = Column(DateTime,default=datetime.utcnow)
 
 
