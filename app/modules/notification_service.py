@@ -22,22 +22,59 @@ def send_assignment_email(
             f"{job_data['county']}"
         )
 
-        body = f"""
-Hello {contractor_name},
+        html = f"""
 
-A new job has been assigned to you.
+        <h2>
+        New Job Assigned
+        </h2>
 
-Client: {job_data['client_name']}
-Defendant: {job_data['defendant_name']}
-County: {job_data['county']}
-Address: {job_data['address']}
+        <p>
+        Hello {contractor_name},
+        </p>
 
-Please login to dashboard for details.
+        <p>
+        A new job has been assigned to you.
+        </p>
 
-Regards,
-CJPS System
-"""
+        <p>
+        <b>Client:</b> {job_data['client_name']}
+        </p>
 
+        <p>
+        <b>Defendant:</b> {job_data['defendant_name']}
+        </p>
+
+        <p>
+        <b>County:</b> {job_data['county']}
+        </p>
+
+        <p>
+        <b>Address:</b> {job_data['address']}
+        </p>
+
+        <p>
+        Please
+        <a
+            href="https://cjps-ai-platform.onrender.com/login"
+            style="
+                color:#2563eb;
+                font-weight:bold;
+                text-decoration:none;
+            "
+        >
+            login to dashboard
+        </a>
+        for details.
+        </p>
+
+        <br>
+
+        <p>
+        Regards,<br>
+        CJPS System
+        </p>
+
+        """
         response = resend.Emails.send({
 
             "from": "CJPS <onboarding@resend.dev>",
@@ -46,7 +83,7 @@ CJPS System
 
             "subject": subject,
 
-            "text": body
+            "html": html
 
         })
 

@@ -24,8 +24,7 @@ from app.modules.client_update_service import send_client_attempt_update
 from app.modules.affidavit_service import generate_affidavit_pdf
 from app.modules.invoice_service import generate_invoice_pdf
 from app.modules.final_package_service import send_final_package
-
-
+from app.modules.payment_service import create_payment_link
 
 from starlette.middleware.sessions import SessionMiddleware
 import os
@@ -714,6 +713,11 @@ def update_job_status(
 
         db.add(log)
         
+        contractor.active_jobs = max(
+            0,
+            contractor.active_jobs - 1
+        )
+
         db.commit()
         # print("UPDATED STATUS:", job.status)
 
@@ -955,6 +959,7 @@ async def log_attempt(
     raw_notes: str = Form(...),
 
     photo: UploadFile = File(None)
+   
 
 ):
 
@@ -1029,6 +1034,7 @@ async def log_attempt(
 
         contractor_id=contractor_id,
 
+
         attempt_number=attempt_number,
 
         status=status,
@@ -1040,18 +1046,23 @@ async def log_attempt(
         photo_path=photo_path
 
     )
-
+    db.commit()
+    
     job = db.query(Job).filter(
         Job.id == job_id
     ).first()
 
     if job and job.client_email:
+        print("SENDING ATTEMPT EMAIL")
+        print("ATTEMPT NUMBER:", attempt_number)
 
         send_client_attempt_update(
 
             client_email=job.client_email,
 
             job_id=job.id,
+
+            attempt_number=attempt_number,
 
             status=status,
 
@@ -1060,7 +1071,8 @@ async def log_attempt(
             photo_url=photo_path
 
         )
-
+        print("ATTEMPT EMAIL SENT")
+    db.commit()
     db.close()
 
     return RedirectResponse(
@@ -1094,9 +1106,33 @@ def send_final_package_route(
 
             invoice_url=job.invoice_path,
 
-            job_id=job.id
+            job_id=job.id,
+
+            payment_link=job.payment_link
 
         )
+
+        job.invoice_status = "Sent"
+
+        db.commit()
+
+        send_final_package(
+
+            client_email=job.client_email,
+
+            client_name=job.client_name,
+
+            affidavit_url=job.affidavit_path,
+
+            invoice_url=job.invoice_path,
+
+            job_id=job.id,
+
+            payment_link=job.payment_link
+
+        )
+
+        print("FINAL PACKAGE SENT")
 
         job.invoice_status = "Sent"
 
@@ -1123,8 +1159,27 @@ def approve_invoice(
     if job:
 
         job.invoice_approved = True
+        job.payment_link = (create_payment_link(job))
 
         db.commit()
+        
+        send_final_package(
+
+            client_email=job.client_email,
+
+            client_name=job.client_name,
+
+            affidavit_url=job.affidavit_path,
+
+            invoice_url=job.invoice_path,
+
+            job_id=job.id,
+
+            payment_link=job.payment_link
+
+        )
+
+        print("FINAL PACKAGE SENT")
 
     db.close()
 

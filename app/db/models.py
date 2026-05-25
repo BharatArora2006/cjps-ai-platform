@@ -34,6 +34,8 @@ class Job(Base):
     invoice_status = Column(String,default="Pending")
     invoice_approved = Column(Boolean, default=False)
     invoice_sent = Column(Boolean, default=False)
+    invoice_number = Column(String,nullable=True)
+    payment_link = Column(Text)
     created_at = Column(DateTime,default=datetime.utcnow)
 
 

@@ -1,5 +1,5 @@
 import os
-
+from datetime import datetime
 from reportlab.platypus import (
     SimpleDocTemplate,
     Paragraph,
@@ -35,6 +35,14 @@ def generate_invoice_pdf(
         f"generated_invoices/invoice_job_{job.id}.pdf"
     )
 
+    year = datetime.utcnow().year
+
+    invoice_number = (
+        f"CJPS-{year}-{job.id:05d}"
+    )
+
+    job.invoice_number = invoice_number
+
     doc = SimpleDocTemplate(
         filename,
         pagesize=letter
@@ -56,8 +64,9 @@ def generate_invoice_pdf(
     )
 
     invoice_text = f"""
+    
 <b>Invoice Number:</b>
-INV-{job.id}
+{job.invoice_number}
 
 <br/><br/>
 
@@ -93,11 +102,6 @@ Process Serving
 
 <b>Total Amount:</b>
 ${job.invoice_amount:.2f}
-
-<br/><br/>
-
-<b>Status:</b>
-Pending Approval
 
 <br/><br/>
 

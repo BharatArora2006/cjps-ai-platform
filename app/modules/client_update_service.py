@@ -13,7 +13,9 @@ def send_client_attempt_update(
     job_id,
     status,
     ai_notes,
+    attempt_number,
     photo_url=None
+    
 
 ):
 
@@ -54,6 +56,7 @@ def send_client_attempt_update(
 
         """
     print("CALLING RESEND")
+    
     resend.Emails.send({
 
         "from": "CJPS <onboarding@resend.dev>",
@@ -61,8 +64,9 @@ def send_client_attempt_update(
         "to": [client_email],
 
         "subject": (
-            f"Service Attempt Update - Job #{job_id}"
-        ),
+            f"Process Service Attempt #{attempt_number} "
+            f"- Job #{job_id}"
+            ),
 
         "html": html
 

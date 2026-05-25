@@ -7,9 +7,11 @@ client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 def rewrite_attempt_note(raw_note):
 
     prompt = f"""
-YYou are a legal process service assistant.
+You are a legal process service assistant.
 
-Rewrite the contractor note professionally.
+Rewrite the following process server attempt note
+into a short, professional, legally appropriate
+service attempt summary.
 
 IMPORTANT RULES:
 
@@ -21,6 +23,19 @@ IMPORTANT RULES:
 - If the note is short or vague, keep it simple and factual
 - Use one sentence only
 - Professional legal tone
+- Correct obvious typos and grammatical mistakes.
+- Do NOT hallucinate names, identities, or events.
+- If the meaning is unclear, keep the summary conservative.
+- Never invent facts not present in the original note.
+- If the note says:
+  "No opened the door"
+  interpret it as:
+  "No one opened the door."
+- Keep responses realistic for legal process serving.
+- Use concise professional language.
+- Do NOT use quotation marks.
+- Return ONLY the rewritten note.
+
 
 Examples:
 

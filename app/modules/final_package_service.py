@@ -16,13 +16,15 @@ def send_final_package(
     client_name,
     affidavit_url,
     invoice_url,
-    job_id
+    job_id,
+    payment_link
 
 ):
 
     subject = (
-        f"Final Service Documents - Job #{job_id}"
-    )
+    f"Final Service Documents - "
+    f"Job #{job_id}"
+)
 
     html = f"""
     <h2>Service Completed</h2>
@@ -49,10 +51,35 @@ def send_final_package(
     <br/>
 
     <p>
+    Please complete payment using the secure link below:
+    </p>
+
+    <p>
+    <a
+        href="{payment_link}"
+
+        style="
+            background:#2563eb;
+            color:white;
+            padding:14px 22px;
+            border-radius:10px;
+            text-decoration:none;
+            font-weight:bold;
+            display:inline-block;
+        "
+    >
+        💳 Pay Invoice
+    </a>
+    </p>
+
+    <br/>
+
+    <p>
     Thank you for your business.
     </p>
-    """
 
+    """
+    print(subject)
     resend.Emails.send({
 
         "from":
