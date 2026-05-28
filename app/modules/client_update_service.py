@@ -29,6 +29,12 @@ def send_client_attempt_update(
     </p>
 
     <p>
+        <strong>Attempt No.:</strong>
+        {attempt_number}
+    </p>
+
+
+    <p>
         <strong>Status:</strong>
         {status}
     </p>

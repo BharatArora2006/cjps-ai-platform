@@ -25,6 +25,7 @@ from app.modules.affidavit_service import generate_affidavit_pdf
 from app.modules.invoice_service import generate_invoice_pdf
 from app.modules.final_package_service import send_final_package
 from app.modules.payment_service import create_payment_link
+from app.modules.security import hash_password,verify_password
 
 from starlette.middleware.sessions import SessionMiddleware
 import os
@@ -735,7 +736,7 @@ def update_job_status(
 
 @app.get("/login")
 def login_page(request: Request):
-
+    print(type(templates))
     return templates.TemplateResponse(
         name="login.html",
         request=request,
@@ -752,32 +753,35 @@ def login(
     db = SessionLocal()
 
     contractor = db.query(Contractor).filter(
-        Contractor.email == email,
-        Contractor.password == password
+        Contractor.email == email
     ).first()
-
-    db.close()
+    print("INPUT PASSWORD:", password)
 
     if contractor:
+        print("DB PASSWORD:", contractor.password)
 
-        # CLEAR OLD SESSION
-        request.session.clear()
+    if contractor and verify_password(
+        password,
+        contractor.password
+    ):
 
-        # SAVE CONTRACTOR SESSION
         request.session["contractor_id"] = contractor.id
 
-        print(
-            "SESSION SAVED:",
-            request.session.get("contractor_id")
-        )
+        db.close()
 
         return RedirectResponse(
             url="/my-jobs",
             status_code=303
         )
 
-    return HTMLResponse(
-        "Invalid credentials"
+    db.close()
+
+    return templates.TemplateResponse(
+        name="login.html",
+        request=request,
+        context={
+            "error": "Invalid credentials"
+        }
     )
 
 @app.get("/my-jobs")
@@ -812,14 +816,18 @@ def admin_login(
     db = SessionLocal()
 
     admin = db.query(Admin).filter(
-        Admin.email == email,
-        Admin.password == password
+        Admin.email == email
     ).first()
 
     db.close()
 
-    if admin:
+    if admin and verify_password(
+        password,
+        admin.password
+    ):
+
         request.session.clear()
+
         request.session["admin_id"] = admin.id
 
         return RedirectResponse(
@@ -827,7 +835,9 @@ def admin_login(
             status_code=303
         )
 
-    return HTMLResponse("Invalid admin credentials")
+    return HTMLResponse(
+        "Invalid admin credentials"
+    )
 
 
 @app.get("/audit-logs")
@@ -1047,7 +1057,7 @@ async def log_attempt(
 
     )
     db.commit()
-    
+
     job = db.query(Job).filter(
         Job.id == job_id
     ).first()
@@ -1209,7 +1219,7 @@ def seed_admin():
 
     admin = Admin(
         email="admin@test.com",
-        password="admin123"
+        password=hash_password("admin123")
     )
 
     db.add(admin)
@@ -1270,7 +1280,7 @@ def seed_contractors():
             email=c["email"],
             phone=c["phone"],
             county=c["county"],
-            password=c["password"]
+            password=hash_password(c["password"])
         )
 
         db.add(contractor)
