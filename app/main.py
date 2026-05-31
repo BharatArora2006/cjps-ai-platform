@@ -8,6 +8,7 @@ from fastapi import UploadFile, File, Form
 from fastapi.staticfiles import StaticFiles
 
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 from app.db.database import SessionLocal, engine
 from app.db.models import Job, Contractor, Admin, Base, AuditLog, AttemptLog
@@ -30,6 +31,7 @@ from app.modules.security import hash_password,verify_password
 from starlette.middleware.sessions import SessionMiddleware
 import os
 from datetime import datetime, timedelta
+import time
 
 # ✅ Create uploads folder if missing
 os.makedirs("uploads", exist_ok=True)
@@ -121,7 +123,7 @@ def process_email(db: Session = Depends(get_db)):
         full_pdf_text += extract_text_from_pdf(file)
 
     data = extract_job_data(email_text, full_pdf_text)
-
+    
     job = create_job(data)
 
     return {
@@ -139,8 +141,8 @@ def dashboard(
     status: str = "",
     county: str = "",
     contractor_id: str = ""
-    ):
-    
+):
+
     if not require_admin(request):
 
         return RedirectResponse(
@@ -162,12 +164,16 @@ def dashboard(
 
     db = SessionLocal()
 
-    invoice_approved = request.query_params.get("invoice_approved")
+    invoice_approved = request.query_params.get(
+        "invoice_approved"
+    )
 
     try:
 
         # ✅ JOB QUERY
         query = db.query(Job)
+
+        
 
         # ✅ SEARCH
         if search:
@@ -207,7 +213,6 @@ def dashboard(
         # ✅ FETCH ALL CONTRACTORS
         contractors_db = db.query(Contractor).all()
 
-        # ✅ CONTRACTOR DROPDOWN DATA
         contractors = [
             {
                 "id": c.id,
@@ -219,29 +224,44 @@ def dashboard(
         jobs = []
 
         for j in jobs_db:
-
+            attempts = db.query(AttemptLog).filter(
+                AttemptLog.job_id == j.id
+            ).all()
             contractor_name = "Not Assigned"
 
-            print("JOB CONTRACTOR ID:", j.contractor_id)
+            print(
+                "JOB CONTRACTOR ID:",
+                j.contractor_id
+            )
 
             if j.contractor_id:
 
-                contractor = db.query(Contractor).filter(
+                contractor = db.query(
+                    Contractor
+                ).filter(
                     Contractor.id == j.contractor_id
                 ).first()
 
-                print("FOUND CONTRACTOR:", contractor)
+                print(
+                    "FOUND CONTRACTOR:",
+                    contractor
+                )
 
                 if contractor:
 
-                    contractor_name = contractor.contractor_name
+                    contractor_name = (
+                        contractor.contractor_name
+                    )
 
             # ✅ SLA OVERDUE CHECK
             is_overdue = False
 
             if j.created_at:
 
-                age = datetime.utcnow() - j.created_at
+                age = (
+                    datetime.utcnow()
+                    - j.created_at
+                )
 
                 if (
                     age > timedelta(days=3)
@@ -252,47 +272,98 @@ def dashboard(
                 ):
 
                     is_overdue = True
-            
+
             jobs.append({
+
                 "id": j.id,
+
                 "client_name": j.client_name,
+
                 "defendant_name": j.defendant_name,
+
                 "address": j.address,
+
                 "county": j.county,
+
                 "status": j.status,
+
+                "invoice_status": j.invoice_status,
+
+                "invoice_approved": j.invoice_approved,
+
+                "attempts": attempts,
+
                 "contractor_name": contractor_name,
+
                 "document_path": j.document_path,
+
                 "affidavit_path": j.affidavit_path,
+
                 "invoice_path": j.invoice_path,
+
                 "is_overdue": is_overdue,
+
                 "created_at": (
                     j.created_at.strftime("%Y-%m-%d")
                     if j.created_at
                     else "N/A"
-                )
-                ,
+                ),
+
                 "summary": j.summary
+
             })
+
+    except Exception as e:
+
+        print(
+            "DASHBOARD ERROR:",
+            str(e)
+        )
+
+        return templates.TemplateResponse(
+            name="dashboard.html",
+            request=request,
+            context={
+                "error": (
+                    "Something went wrong "
+                    "while loading dashboard."
+                ),
+                "jobs": []
+            }
+        )
 
     finally:
 
         db.close()
 
-    success = request.query_params.get("success")
+    success = request.query_params.get(
+        "success"
+    )
+
     return templates.TemplateResponse(
         name="dashboard.html",
         request=request,
         context={
+
             "jobs": jobs,
+
             "contractors": contractors,
+
             "success": success,
+
             "search": search,
+
             "selected_status": status,
+
             "selected_county": county,
+
             "selected_contractor": contractor_id,
+
             "invoice_approved": invoice_approved
+
         }
     )
+
 
 # ✅ APPROVE JOB
 @app.post("/jobs/{job_id}/approve")
@@ -452,8 +523,7 @@ async def upload_files(
     files: list[UploadFile] = File(...)
 ):
 
-    import os
-
+    start_time = time.time()
     full_pdf_text = ""
 
     saved_file_path = None
@@ -518,15 +588,20 @@ async def upload_files(
         full_pdf_text
     )
 
+    processing_time = round(
+        time.time() - start_time,
+        2
+    )
+
     # AI SUMMARY
     summary = generate_case_summary(data)
-    # summary = "Test Summary"
-
+    
     # SAVE JOB
     create_job(
         data,
         document_path=saved_file_path,
-        summary=summary
+        summary=summary,
+        processing_time=processing_time
     )
 
     return RedirectResponse(
@@ -605,17 +680,32 @@ def contractor_jobs(
     
 
     for j in jobs_db:
-
+        attempts = db.query(AttemptLog).filter(
+            AttemptLog.job_id == j.id
+        ).all()
         jobs.append({
-            "id": j.id,
-            "client_name": j.client_name,
-            "defendant_name": j.defendant_name,
-            "address": j.address,
-            "status": j.status,
-            "document_path": j.document_path,
-            "affidavit_path": j.affidavit_path
-        })
 
+            "id": j.id,
+
+            "attempts": attempts,
+
+            "client_name": j.client_name,
+
+            "defendant_name": j.defendant_name,
+
+            "address": j.address,
+
+            "status": j.status,
+
+            "invoice_status": j.invoice_status,
+
+            "invoice_approved": j.invoice_approved,
+
+            "document_path": j.document_path,
+
+            "affidavit_path": j.affidavit_path
+
+        })
     db.close()
 
     for job in jobs:
@@ -936,6 +1026,34 @@ def analytics_dashboard(
             contractor.active_jobs or 0
         )
 
+    ai_processed_jobs = db.query(Job).filter(
+        Job.ai_processed == True
+    ).count()
+
+    manual_review_jobs = db.query(Job).filter(
+        Job.manual_review_required == True
+    ).count()
+
+    avg_ai_time_query = db.query(
+        func.avg(Job.ai_processing_time)
+    ).scalar()
+
+    avg_ai_time = round(
+        avg_ai_time_query or 0,
+        2
+    )
+
+    if total_jobs > 0:
+
+        ai_success_rate = round(
+            (ai_processed_jobs / total_jobs) * 100,
+            2
+        )
+
+    else:
+
+        ai_success_rate = 0
+
     db.close()
 
     return templates.TemplateResponse(
@@ -953,7 +1071,12 @@ def analytics_dashboard(
             "county_values": list(county_data.values()),
 
             "contractor_labels": contractor_labels,
-            "contractor_jobs": contractor_jobs
+            "contractor_jobs": contractor_jobs,
+           
+            "ai_processed_jobs": ai_processed_jobs,
+            "manual_review_jobs": manual_review_jobs,
+            "avg_ai_time": avg_ai_time,
+            "ai_success_rate": ai_success_rate
         }
     )
 
@@ -1169,9 +1292,15 @@ def approve_invoice(
     if job:
 
         job.invoice_approved = True
+        job.invoice_status = "Approved"
         job.payment_link = (create_payment_link(job))
-
+        print("BEFORE COMMIT:")
+        print(job.invoice_approved)
+        print(job.invoice_status)
         db.commit()
+        print("AFTER COMMIT:")
+        print(job.invoice_approved)
+        print(job.invoice_status)
         
         send_final_package(
 

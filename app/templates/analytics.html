@@ -178,6 +178,25 @@
             <h2>{{ assigned_jobs }}</h2>
             <p>Assigned</p>
         </div>
+        <div class="card">
+            <h2>{{ ai_processed_jobs }}</h2>
+            <p>AI Processed Jobs</p>
+        </div>
+
+        <div class="card">
+            <h2>{{ avg_ai_time }}</h2>
+            <p>Avg AI Processing Time (sec)</p>
+        </div>
+
+        <div class="card">
+            <h2>{{ manual_review_jobs }}</h2>
+            <p>Manual Reviews Required</p>
+        </div>
+
+        <div class="card">
+            <h2>{{ ai_success_rate }}%</h2>
+            <p>AI Success Rate</p>
+        </div>
 
     </div>
 
@@ -186,7 +205,7 @@
         <h2>
             Jobs by County
         </h2>
-
+        
         <canvas id="countyChart"></canvas>
 
     </div>
@@ -198,6 +217,15 @@
         </h2>
 
         <canvas id="contractorChart"></canvas>
+
+    </div>
+    <div class="chart-container">
+
+        <h2>
+            AI Processing Metrics
+        </h2>
+
+        <canvas id="aiChart"></canvas>
 
     </div>
 
@@ -238,6 +266,30 @@
                 }
             }
         )
+        
+        // AI METRICS CHART
+        new Chart(
+            document.getElementById("aiChart"),
+            {
+                type: "doughnut",
+
+                data: {
+
+                    labels: [
+                        "AI Processed",
+                        "Manual Review"
+                    ],
+
+                    datasets: [{
+                        data: [
+                            {{ ai_processed_jobs }},
+                            {{ manual_review_jobs }}
+                        ]
+                    }]
+                }
+            }
+        )
+
 
     </script>
 

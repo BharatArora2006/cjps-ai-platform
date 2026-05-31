@@ -311,6 +311,14 @@
 
         </a>
 
+        <a href="/audit-logs">
+
+            <button class="btn btn-dark">
+                📜 View Audit Logs
+            </button>
+
+        </a>
+
     </div>
     {% if success %}
 
@@ -558,6 +566,8 @@
 
                 <th>Invoice</th>
 
+                <th>Timeline</th>
+
                 <th>Actions</th>
 
             </tr>
@@ -799,6 +809,42 @@
 
                 </td>
                 
+                <td>
+                    <div class="timeline-box">
+
+                        <div>
+                            ✅ Created
+                        </div>
+
+                        {% for attempt in job.attempts %}
+
+                        <div>
+                            📌 Attempt #{{ attempt.attempt_number }}
+                        </div>
+
+                        {% endfor %}
+
+                        {% if job.status == "Completed" %}
+
+                        <div>
+                            ✅ Service Completed
+                        </div>
+
+                        {% endif %}
+
+                        {% if job.invoice_status == "Approved" %}
+
+                        <div>
+                            💳 Invoice Approved
+                        </div>
+
+                        {% endif %}
+
+                    </div>
+
+                </td>
+
+
                 <td>
                     <div class="action-buttons">
 

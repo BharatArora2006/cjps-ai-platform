@@ -1,40 +1,249 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
     <title>Audit Logs</title>
+
+    <style>
+
+        *{
+            margin:0;
+            padding:0;
+            box-sizing:border-box;
+        }
+
+        body{
+
+            font-family:Arial;
+
+            background:#f3f4f6;
+
+            padding:30px;
+        }
+
+        .header{
+
+            background:linear-gradient(
+                135deg,
+                #111827,
+                #2563eb
+            );
+
+            color:white;
+
+            padding:30px;
+
+            border-radius:18px;
+
+            margin-bottom:25px;
+        }
+
+        .header h1{
+
+            font-size:34px;
+
+            margin-bottom:10px;
+        }
+
+        .header p{
+
+            opacity:0.9;
+        }
+
+        .top-actions{
+
+            margin-bottom:20px;
+        }
+
+        .btn{
+
+            padding:12px 18px;
+
+            border:none;
+
+            border-radius:10px;
+
+            background:#111827;
+
+            color:white;
+
+            text-decoration:none;
+
+            cursor:pointer;
+
+            font-size:14px;
+        }
+
+        .table-container{
+
+            background:white;
+
+            padding:25px;
+
+            border-radius:18px;
+
+            box-shadow:
+            0 2px 10px rgba(0,0,0,0.08);
+
+            overflow-x:auto;
+        }
+
+        table{
+
+            width:100%;
+
+            border-collapse:collapse;
+        }
+
+        th{
+
+            background:#2563eb;
+
+            color:white;
+
+            padding:15px;
+
+            text-align:left;
+
+            font-size:14px;
+        }
+
+        td{
+
+            padding:14px;
+
+            border-bottom:
+            1px solid #e5e7eb;
+
+            font-size:14px;
+        }
+
+        tr:hover{
+
+            background:#f9fafb;
+        }
+
+        .badge{
+
+            display:inline-block;
+
+            padding:6px 12px;
+
+            border-radius:999px;
+
+            font-size:12px;
+
+            font-weight:bold;
+
+            background:#dbeafe;
+
+            color:#1d4ed8;
+        }
+
+        .empty{
+
+            padding:30px;
+
+            text-align:center;
+
+            color:gray;
+        }
+
+    </style>
+
 </head>
 
 <body>
 
-    <h1>Audit Logs</h1>
+    <div class="top-actions">
 
-    <table border="1" cellpadding="10">
+        <a href="/dashboard">
 
-        <tr>
-            <th>Time</th>
-            <th>Action</th>
-            <th>User</th>
-            <th>Job ID</th>
-        </tr>
+            <button class="btn">
+                ← Back to Dashboard
+            </button>
 
-        {% for log in logs %}
+        </a>
 
-        <tr>
+    </div>
 
-            <td>{{ log.timestamp }}</td>
+    <div class="header">
 
-            <td>{{ log.action }}</td>
+        <h1>
+            📜 Audit Logs
+        </h1>
 
-            <td>{{ log.performed_by }}</td>
+        <p>
+            System activity tracking and workflow history
+        </p>
 
-            <td>{{ log.job_id }}</td>
+    </div>
 
-        </tr>
+    <div class="table-container">
 
-        {% endfor %}
+        {% if logs %}
 
-    </table>
+        <table>
+
+            <tr>
+
+                <th>Timestamp</th>
+
+                <th>Action</th>
+
+                <th>Performed By</th>
+
+                <th>Job ID</th>
+
+            </tr>
+
+            {% for log in logs %}
+
+            <tr>
+
+                <td>
+                    {{ log.timestamp }}
+                </td>
+
+                <td>
+
+                    <span class="badge">
+                        {{ log.action }}
+                    </span>
+
+                </td>
+
+                <td>
+                    {{ log.performed_by }}
+                </td>
+
+                <td>
+                    #{{ log.job_id }}
+                </td>
+
+            </tr>
+
+            {% endfor %}
+
+        </table>
+
+        {% else %}
+
+        <div class="empty">
+
+            No audit logs available.
+
+        </div>
+
+        {% endif %}
+
+    </div>
 
 </body>
 

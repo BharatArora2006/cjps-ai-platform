@@ -7,8 +7,9 @@ from app.modules.notification_service import send_assignment_email
 
 def create_job(
         data, 
+        processing_time,
         document_path=None,
-         summary=None
+        summary=None
         ):
 
     db = SessionLocal()
@@ -38,7 +39,10 @@ def create_job(
         contractor_id=contractor_id,
         document_path=document_path,
         summary=summary,
-        status="Assigned" if contractor_id else "Pending"
+        status="Assigned" if contractor_id else "Pending",
+        ai_processed=True,
+        ai_processing_time=processing_time,
+        manual_review_required=False
     )
 
     db.add(job)

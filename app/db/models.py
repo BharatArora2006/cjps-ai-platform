@@ -36,6 +36,9 @@ class Job(Base):
     invoice_sent = Column(Boolean, default=False)
     invoice_number = Column(String,nullable=True)
     payment_link = Column(Text)
+    ai_processed = Column(Boolean, default=False)
+    ai_processing_time = Column(Float, nullable=True)
+    manual_review_required = Column(Boolean, default=False)
     created_at = Column(DateTime,default=datetime.utcnow)
 
 
@@ -103,6 +106,8 @@ class AttemptLog(Base):
         String,
         nullable=True
     )
+
+    ai_rewritten = Column(Boolean, default=True)
 
     created_at = Column(
         DateTime(timezone=True),
